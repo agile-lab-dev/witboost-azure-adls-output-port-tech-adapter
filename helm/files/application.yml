@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: adls-op
+
+server:
+  port: 8888
+
+springdoc:
+  swagger-ui:
+    path: /docs
