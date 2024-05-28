@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import it.agilelab.witboost.provisioning.adlsop.common.FailedOperation;
 import it.agilelab.witboost.provisioning.adlsop.common.Problem;
 import it.agilelab.witboost.provisioning.adlsop.model.Component;
+import it.agilelab.witboost.provisioning.adlsop.model.OutputPortSpecific;
 import it.agilelab.witboost.provisioning.adlsop.model.ProvisionRequest;
 import it.agilelab.witboost.provisioning.adlsop.model.Specific;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.DescriptorKind;
@@ -23,15 +24,21 @@ public class ValidationServiceImpl implements ValidationService {
 
     private final String OUTPUTPORT_KIND = "outputport";
     private final String STORAGE_KIND = "storage";
-
     private final String WORKLOAD_KIND = "workload";
+
     private static final Logger logger = LoggerFactory.getLogger(ValidationServiceImpl.class);
     private final Map<String, Class<? extends Specific>> kindToSpecificClass =
-            Map.of(STORAGE_KIND, Specific.class, OUTPUTPORT_KIND, Specific.class, WORKLOAD_KIND, Specific.class);
+            Map.of(OUTPUTPORT_KIND, OutputPortSpecific.class);
+
+    private final OutputPortValidator outputPortValidator;
+
+    public ValidationServiceImpl(OutputPortValidator outputPortValidator) {
+        this.outputPortValidator = outputPortValidator;
+    }
 
     @Override
     public Either<FailedOperation, ProvisionRequest<? extends Specific>> validate(
-            ProvisioningRequest provisioningRequest) {
+            ProvisioningRequest provisioningRequest, boolean validateStorageAccountExists) {
 
         logger.info("Starting Descriptor validation");
         logger.info("Checking Descriptor Kind equals COMPONENT_DESCRIPTOR");
@@ -72,33 +79,15 @@ public class ValidationServiceImpl implements ValidationService {
         var componentKindToProvision = optionalComponentKindToProvision.get();
         Component<? extends Specific> componentToProvision;
         switch (componentKindToProvision) {
-            case STORAGE_KIND:
-                var storageClass = kindToSpecificClass.get(STORAGE_KIND);
-                logger.info("Parsing Storage Area Component");
-                var eitherStorageToProvision = Parser.parseComponent(componentToProvisionAsJson, storageClass);
-                if (eitherStorageToProvision.isLeft()) return left(eitherStorageToProvision.getLeft());
-                componentToProvision = eitherStorageToProvision.get();
-                var storageAreaValidation = StorageAreaValidation.validate(componentToProvision);
-                if (storageAreaValidation.isLeft()) return left(storageAreaValidation.getLeft());
-                break;
             case OUTPUTPORT_KIND:
                 var outputPortClass = kindToSpecificClass.get(OUTPUTPORT_KIND);
                 logger.info("Parsing Output Port Component");
                 var eitherOutputPortToProvision = Parser.parseComponent(componentToProvisionAsJson, outputPortClass);
                 if (eitherOutputPortToProvision.isLeft()) return left(eitherOutputPortToProvision.getLeft());
                 componentToProvision = eitherOutputPortToProvision.get();
-                var outputPortValidation =
-                        OutputPortValidation.validate(descriptor.getDataProduct(), componentToProvision);
+                var outputPortValidation = outputPortValidator.validate(
+                        descriptor.getDataProduct(), componentToProvision, validateStorageAccountExists);
                 if (outputPortValidation.isLeft()) return left(outputPortValidation.getLeft());
-                break;
-            case WORKLOAD_KIND:
-                var workloadClass = kindToSpecificClass.get(WORKLOAD_KIND);
-                logger.info("Parsing Workload Component");
-                var eitherWorkloadToProvision = Parser.parseComponent(componentToProvisionAsJson, workloadClass);
-                if (eitherWorkloadToProvision.isLeft()) return left(eitherWorkloadToProvision.getLeft());
-                componentToProvision = eitherWorkloadToProvision.get();
-                var workloadValidation = WorkloadValidation.validate(descriptor.getDataProduct(), componentToProvision);
-                if (workloadValidation.isLeft()) return left(workloadValidation.getLeft());
                 break;
             default:
                 String errorMessage = String.format(

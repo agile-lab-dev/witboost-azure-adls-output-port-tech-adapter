@@ -8,5 +8,13 @@ import it.agilelab.witboost.provisioning.adlsop.openapi.model.ProvisioningReques
 
 public interface ValidationService {
 
-    Either<FailedOperation, ProvisionRequest<? extends Specific>> validate(ProvisioningRequest provisioningRequest);
+    /**
+     * Validates a provisioning request, performing schema validations and environment checks
+     * @param provisioningRequest Provisioning request to be validated
+     * @param validateStorageAccountExists If true, the method will query the ADLS Gen-2 instance and validate
+     *                                     the storage account and container existence
+     * @return
+     */
+    Either<FailedOperation, ProvisionRequest<? extends Specific>> validate(
+            ProvisioningRequest provisioningRequest, boolean validateStorageAccountExists);
 }

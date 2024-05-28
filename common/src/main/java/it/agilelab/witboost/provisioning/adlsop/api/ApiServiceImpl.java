@@ -25,7 +25,8 @@ public class ApiServiceImpl {
     }
 
     public ValidationResult validate(ProvisioningRequest provisioningRequest) {
-        Either<FailedOperation, ProvisionRequest<? extends Specific>> validate = service.validate(provisioningRequest);
+        Either<FailedOperation, ProvisionRequest<? extends Specific>> validate =
+                service.validate(provisioningRequest, false);
         return validate.fold(
                 failedOperation -> new ValidationResult(false)
                         .error(new ValidationError(failedOperation.problems().stream()

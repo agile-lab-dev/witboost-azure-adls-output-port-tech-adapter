@@ -14,4 +14,32 @@
         <packageUrl regex="true">^pkg:maven/io\.swagger\.parser\.v3/swagger\-parser\-safe\-url\-resolver@.*$</packageUrl>
         <cve>CVE-2022-2900</cve>
     </suppress>
+    <suppress>
+        <notes><![CDATA[
+   file name: adls-op-specific-provisioner.jar: reactor-netty-core-1.1.16.jar
+   ]]></notes>
+        <sha1>cf9af9296b92100cfe8284fe262fce4b493dcde5</sha1>
+        <cve>CVE-2019-20444</cve>
+    </suppress>
+    <suppress>
+        <notes><![CDATA[
+   file name: adls-op-specific-provisioner.jar: reactor-netty-core-1.1.16.jar
+   ]]></notes>
+        <sha1>cf9af9296b92100cfe8284fe262fce4b493dcde5</sha1>
+        <cve>CVE-2019-20445</cve>
+    </suppress>
+    <suppress>
+        <notes><![CDATA[
+   file name: adls-op-specific-provisioner.jar: reactor-netty-http-1.1.16.jar
+   ]]></notes>
+        <sha1>a1be57535c8bdd2ae9d35d8bcf699fafe6de02e6</sha1>
+        <cve>CVE-2019-20444</cve>
+    </suppress>
+    <suppress>
+        <notes><![CDATA[
+   file name: adls-op-specific-provisioner.jar: reactor-netty-http-1.1.16.jar
+   ]]></notes>
+        <sha1>a1be57535c8bdd2ae9d35d8bcf699fafe6de02e6</sha1>
+        <cve>CVE-2019-20445</cve>
+    </suppress>
 </suppressions>

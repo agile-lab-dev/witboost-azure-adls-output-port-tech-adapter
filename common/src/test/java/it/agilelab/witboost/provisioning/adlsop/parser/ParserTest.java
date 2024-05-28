@@ -53,43 +53,12 @@ public class ParserTest {
     }
 
     @Test
-    public void testParseStorageComponentOk() throws IOException {
-        String ymlDescriptor = ResourceUtils.getContentFromResource("/pr_descriptor_storage.yml");
-        var eitherDescriptor = Parser.parseDescriptor(ymlDescriptor);
-        Assertions.assertTrue(eitherDescriptor.isRight());
-        Descriptor descriptor = eitherDescriptor.get();
-        String componentIdToProvision = "urn:dmb:cmp:healthcare:vaccinations:0:storage";
-        var optionalComponent = descriptor.getDataProduct().getComponentToProvision(componentIdToProvision);
-        Assertions.assertTrue(optionalComponent.isDefined());
-        JsonNode component = optionalComponent.get();
-
-        var actualRes = Parser.parseComponent(component, Specific.class);
-        Assertions.assertTrue(actualRes.isRight());
-    }
-
-    @Test
     public void testParseOutputPortComponentOk() throws IOException {
         String ymlDescriptor = ResourceUtils.getContentFromResource("/pr_descriptor_outputport.yml");
         var eitherDescriptor = Parser.parseDescriptor(ymlDescriptor);
         Assertions.assertTrue(eitherDescriptor.isRight());
         Descriptor descriptor = eitherDescriptor.get();
         String componentIdToProvision = "urn:dmb:cmp:healthcare:vaccinations:0:hdfs-output-port";
-        var optionalComponent = descriptor.getDataProduct().getComponentToProvision(componentIdToProvision);
-        Assertions.assertTrue(optionalComponent.isDefined());
-        JsonNode component = optionalComponent.get();
-
-        var actualRes = Parser.parseComponent(component, Specific.class);
-
-        Assertions.assertTrue(actualRes.isRight());
-    }
-
-    @Test
-    public void testParseWorkloadComponentOk() throws IOException {
-        String ymlDescriptor = ResourceUtils.getContentFromResource("/pr_descriptor_workload.yml");
-        var eitherDescriptor = Parser.parseDescriptor(ymlDescriptor);
-        Assertions.assertTrue(eitherDescriptor.isRight());
-        Descriptor descriptor = eitherDescriptor.get();
-        String componentIdToProvision = "urn:dmb:cmp:healthcare:dbt-provisioner:0:dbt-transformation-workload";
         var optionalComponent = descriptor.getDataProduct().getComponentToProvision(componentIdToProvision);
         Assertions.assertTrue(optionalComponent.isDefined());
         JsonNode component = optionalComponent.get();

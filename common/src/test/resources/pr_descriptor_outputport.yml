@@ -57,5 +57,8 @@ dataProduct:
       tags: []
       sampleData: {}
       semanticLinking: []
-      specific: {}
+      specific:
+        storageAccount: storageAccount
+        container: container
+        path: path/to/folder/
 componentIdToProvision: urn:dmb:cmp:healthcare:vaccinations:0:hdfs-output-port

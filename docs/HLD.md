@@ -31,12 +31,13 @@ Azure ADLS Gen 2 Output Port Specific Provisioner is used to provision an output
 
 #### Validate
 
-This Specific Provisioner interacts with the Azure environment by creating a path (i.e. a folder) into a container of the `ADLS Gen 2 storage account`. Therefore, the validation checks that both the Storage Account and the container are in place.
+This Specific Provisioner interacts with the Azure environment by creating a path (i.e. a folder) into a container of the `ADLS Gen 2 storage account`, so it checks that the descriptor contains these values. It doesn't perform checks on the Azure environment as these resources may not yet exist before provisioning.
+
 ![Validate](img/hld-Validate.png)
 
 #### Provision
 
-The provisioning phase creates the path into the container of the storage account, if it doesn't exist yet.
+The provisioning phase creates the path into the container of the storage account, if it doesn't exist yet. In this step, when validating the descriptor, the provisioner also checks that both the Storage Account and the container are in place, as it expects these resources to already exist in order to perform the provisioning phase correctly.
 
 ![Provisioning](img/hld-Provisioning.png)
 

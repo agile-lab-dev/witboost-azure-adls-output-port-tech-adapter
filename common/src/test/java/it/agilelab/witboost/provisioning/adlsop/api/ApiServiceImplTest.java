@@ -34,7 +34,7 @@ public class ApiServiceImplTest {
     @Test
     public void testValidateOk() {
         ProvisioningRequest provisioningRequest = new ProvisioningRequest();
-        when(validationService.validate(provisioningRequest))
+        when(validationService.validate(provisioningRequest, false))
                 .thenReturn(Either.right(new ProvisionRequest<Specific>(null, null, false)));
         var expectedRes = new ValidationResult(true);
 
@@ -47,7 +47,7 @@ public class ApiServiceImplTest {
     public void testValidateError() {
         ProvisioningRequest provisioningRequest = new ProvisioningRequest();
         var failedOperation = new FailedOperation(Collections.singletonList(new Problem("error")));
-        when(validationService.validate(provisioningRequest)).thenReturn(Either.left(failedOperation));
+        when(validationService.validate(provisioningRequest, false)).thenReturn(Either.left(failedOperation));
         var expectedRes = new ValidationResult(false).error(new ValidationError(List.of("error")));
 
         var actualRes = provisionService.validate(provisioningRequest);
