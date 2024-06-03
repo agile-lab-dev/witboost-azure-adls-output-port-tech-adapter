@@ -6,7 +6,7 @@
 
 Designed by [Agile Lab](https://www.agilelab.it/), witboost is a versatile platform that addresses a wide range of sophisticated data engineering challenges. It enables businesses to discover, enhance, and productize their data, fostering the creation of automated data platforms that adhere to the highest standards of data governance. Want to know more about witboost? Check it out [here](https://www.agilelab.it/witboost) or [contact us!](https://www.agilelab.it/contacts).
 
-This repository is part of our [Starter Kit](https://github.com/agile-lab-dev/witboost-starter-kit) meant to showcase witboost's integration capabilities and provide a "batteries-included" product.
+This repository is part of our [Starter Kit](https://github.com/agile-lab-dev/witboost-starter-kit) meant to showcase Witboost integration capabilities and provide a "batteries-included" product.
 
 # ADLS Gen 2 Output Port
 
@@ -30,7 +30,7 @@ You can learn more about how the Specific Provisioners fit in the broader pictur
 
 ### ADLS Gen 2
 
-This provisioner creates a path within an existing ADLS Gen 2 container and manages it's ACLs.
+This provisioner creates a path within an existing ADLS Gen 2 container and manages its ACLs.
 
 ### Software stack
 

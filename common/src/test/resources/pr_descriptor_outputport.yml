@@ -61,4 +61,5 @@ dataProduct:
         storageAccount: storageAccount
         container: container
         path: path/to/folder/
+        fileFormat: CSV
 componentIdToProvision: urn:dmb:cmp:healthcare:vaccinations:0:hdfs-output-port

@@ -40,6 +40,7 @@ public class OutputPortValidatorTest {
         specific.setStorageAccount("storage-account");
         specific.setContainer("container");
         specific.setPath("path/to/folder");
+        specific.setFileFormat("CSV");
 
         OutputPort<OutputPortSpecific> outputPort = new OutputPort<>();
         outputPort.setId("my_id_outputport");
@@ -68,6 +69,7 @@ public class OutputPortValidatorTest {
         specific.setStorageAccount("storage-account");
         specific.setContainer("container");
         specific.setPath("path/to/folder");
+        specific.setFileFormat("CSV");
 
         OutputPort<OutputPortSpecific> outputPort = new OutputPort<>();
         outputPort.setId("my_id_outputport");
@@ -98,6 +100,7 @@ public class OutputPortValidatorTest {
         specific.setStorageAccount("storage-account");
         specific.setContainer("container");
         specific.setPath("path/to/folder");
+        specific.setFileFormat("CSV");
 
         OutputPort<OutputPortSpecific> outputPort = new OutputPort<>();
         outputPort.setId("my_id_outputport");
@@ -135,6 +138,7 @@ public class OutputPortValidatorTest {
         specific.setStorageAccount("storage-account");
         specific.setContainer("container");
         specific.setPath("path/to/folder");
+        specific.setFileFormat("CSV");
 
         OutputPort<OutputPortSpecific> outputPort = new OutputPort<>();
         outputPort.setId("my_id_outputport");

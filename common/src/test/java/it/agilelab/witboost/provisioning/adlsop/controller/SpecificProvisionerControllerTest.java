@@ -42,7 +42,8 @@ public class SpecificProvisionerControllerTest {
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(mockHttpServletRequest));
         when(service.validate(provisioningRequest)).thenReturn(new ValidationResult(true));
 
-        ResponseEntity<ValidationResult> actualRes = specificProvisionerController.validate(provisioningRequest);
+        ResponseEntity<it.agilelab.witboost.provisioning.adlsop.openapi.model.ValidationResult> actualRes =
+                specificProvisionerController.validate(provisioningRequest);
 
         Assertions.assertEquals(HttpStatusCode.valueOf(200), actualRes.getStatusCode());
         Assertions.assertTrue(Objects.requireNonNull(actualRes.getBody()).getValid());
