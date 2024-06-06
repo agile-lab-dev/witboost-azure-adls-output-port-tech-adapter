@@ -6,17 +6,21 @@ import it.agilelab.witboost.provisioning.adlsop.common.Problem;
 import it.agilelab.witboost.provisioning.adlsop.common.SpecificProvisionerValidationException;
 import it.agilelab.witboost.provisioning.adlsop.model.ProvisionRequest;
 import it.agilelab.witboost.provisioning.adlsop.model.Specific;
+import it.agilelab.witboost.provisioning.adlsop.openapi.model.DescriptorKind;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ProvisioningRequest;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ProvisioningStatus;
+import it.agilelab.witboost.provisioning.adlsop.openapi.model.UpdateAclRequest;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ValidationError;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ValidationResult;
 import it.agilelab.witboost.provisioning.adlsop.service.provision.OutputPortHandler;
 import it.agilelab.witboost.provisioning.adlsop.service.validation.ValidationService;
 import java.util.Collections;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 public class ApiServiceImpl {
 
     private final ValidationService validationService;
@@ -73,6 +77,38 @@ public class ApiServiceImpl {
             default:
                 throw new SpecificProvisionerValidationException(
                         unsupportedKind(provisionRequest.component().getKind()));
+        }
+    }
+
+    public ProvisioningStatus updateAcl(UpdateAclRequest updateAclRequest) {
+        log.info("Starting updating Access Control Lists");
+        // Converting the ProvisionInfo.request to a ProvisioningRequest, to exploit validation methods already in place
+        ProvisioningRequest provisioningRequest = new ProvisioningRequest(
+                DescriptorKind.COMPONENT_DESCRIPTOR,
+                updateAclRequest.getProvisionInfo().getRequest(),
+                Boolean.FALSE);
+
+        Either<FailedOperation, ProvisionRequest<? extends Specific>> eitherValidation =
+                validationService.validate(provisioningRequest, true);
+        if (eitherValidation.isLeft()) throw new SpecificProvisionerValidationException(eitherValidation.getLeft());
+
+        ProvisionRequest<? extends Specific> provisionRequest = eitherValidation.get();
+
+        switch (provisionRequest.component().getKind()) {
+            case OUTPUTPORT_KIND -> {
+                return outputPortHandler
+                        .updateAcl(updateAclRequest.getRefs(), provisionRequest)
+                        .getOrElseThrow(failedOperation -> {
+                            throw new SpecificProvisionerValidationException(failedOperation);
+                        });
+            }
+            default -> {
+                log.error(String.format(
+                        "Component kind '%s' is invalid",
+                        provisionRequest.component().getKind()));
+                throw new SpecificProvisionerValidationException(
+                        unsupportedKind(provisionRequest.component().getKind()));
+            }
         }
     }
 

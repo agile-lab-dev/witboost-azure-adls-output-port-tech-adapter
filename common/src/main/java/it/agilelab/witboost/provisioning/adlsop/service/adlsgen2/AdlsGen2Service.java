@@ -4,6 +4,7 @@ import io.vavr.control.Either;
 import it.agilelab.witboost.provisioning.adlsop.common.FailedOperation;
 import it.agilelab.witboost.provisioning.adlsop.model.AdlsGen2DirectoryInfo;
 import it.agilelab.witboost.provisioning.adlsop.model.StorageAccountInfo;
+import java.util.List;
 
 public interface AdlsGen2Service {
 
@@ -16,4 +17,7 @@ public interface AdlsGen2Service {
 
     Either<FailedOperation, Void> deleteDirectory(
             String storageAccount, String containerName, String path, boolean removeData);
+
+    Either<FailedOperation, Void> updateAcl(
+            String storageAccount, String containerName, String path, List<String> usersObjectId);
 }

@@ -12,9 +12,11 @@ import com.azure.resourcemanager.resourcegraph.models.ResourceProviders;
 import com.azure.storage.file.datalake.DataLakeDirectoryClient;
 import com.azure.storage.file.datalake.DataLakeFileSystemClient;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
-import com.azure.storage.file.datalake.models.DataLakeStorageException;
+import com.azure.storage.file.datalake.models.*;
+import it.agilelab.witboost.provisioning.adlsop.common.Problem;
 import it.agilelab.witboost.provisioning.adlsop.model.AdlsGen2DirectoryInfo;
 import it.agilelab.witboost.provisioning.adlsop.model.StorageAccountInfo;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -168,8 +170,6 @@ class AdlsGen2ServiceImplTest {
         DataLakeFileSystemClient dataLakeFileSystemClient = Mockito.mock(DataLakeFileSystemClient.class);
         DataLakeDirectoryClient dataLakeDirectoryClient = Mockito.mock(DataLakeDirectoryClient.class);
 
-        String url = "https://storage-account.dfs.core.windows.net/container/path/to/folder";
-
         when(adlsGen2Service.getDataLakeServiceClient("storage-account")).thenReturn(dataLakeServiceClient);
         when(dataLakeServiceClient.getFileSystemClient("container")).thenReturn(dataLakeFileSystemClient);
         when(dataLakeFileSystemClient.createDirectoryIfNotExists("path/to/folder"))
@@ -216,11 +216,23 @@ class AdlsGen2ServiceImplTest {
     void deleteDirectoryNoRemoveDataReturnsOk() {
         DataLakeServiceClient dataLakeServiceClient = Mockito.mock(DataLakeServiceClient.class);
         DataLakeFileSystemClient dataLakeFileSystemClient = Mockito.mock(DataLakeFileSystemClient.class);
+        DataLakeDirectoryClient directoryClient = Mockito.mock(DataLakeDirectoryClient.class);
 
-        String url = "https://storage-account.dfs.core.windows.net/container/path/to/folder";
+        AccessControlChangeResult accessControlChangeResult = new AccessControlChangeResult();
+        accessControlChangeResult.setCounters(new AccessControlChangeCounters().setFailedChangesCount(0));
+
+        PathAccessControl pathAccessControl = new PathAccessControl(null, null, "group", "owner");
 
         when(adlsGen2Service.getDataLakeServiceClient("storage-account")).thenReturn(dataLakeServiceClient);
         when(dataLakeServiceClient.getFileSystemClient("container")).thenReturn(dataLakeFileSystemClient);
+        when(dataLakeFileSystemClient.getDirectoryClient("path/to/folder")).thenReturn(directoryClient);
+
+        when(directoryClient.getAccessControl()).thenReturn(pathAccessControl);
+        when(directoryClient.setAccessControlList(
+                        AccessControlUtils.getDefaultAccessControlEntries(), "group", "owner"))
+                .thenReturn(new PathInfo(null, null));
+        when(directoryClient.setAccessControlRecursive(AccessControlUtils.getDefaultAccessControlEntries()))
+                .thenReturn(accessControlChangeResult);
         verify(dataLakeFileSystemClient, never()).deleteDirectoryWithResponse("path/to/folder", true, null, null, null);
 
         var actualResult = adlsGen2Service.deleteDirectory("storage-account", "container", "path/to/folder", false);
@@ -232,11 +244,23 @@ class AdlsGen2ServiceImplTest {
     void deleteDirectoryRemoveDataReturnsOk() {
         DataLakeServiceClient dataLakeServiceClient = Mockito.mock(DataLakeServiceClient.class);
         DataLakeFileSystemClient dataLakeFileSystemClient = Mockito.mock(DataLakeFileSystemClient.class);
+        DataLakeDirectoryClient directoryClient = Mockito.mock(DataLakeDirectoryClient.class);
 
-        String url = "https://storage-account.dfs.core.windows.net/container/path/to/folder";
+        AccessControlChangeResult accessControlChangeResult = new AccessControlChangeResult();
+        accessControlChangeResult.setCounters(new AccessControlChangeCounters().setFailedChangesCount(0));
+
+        PathAccessControl pathAccessControl = new PathAccessControl(null, null, "group", "owner");
 
         when(adlsGen2Service.getDataLakeServiceClient("storage-account")).thenReturn(dataLakeServiceClient);
         when(dataLakeServiceClient.getFileSystemClient("container")).thenReturn(dataLakeFileSystemClient);
+        when(dataLakeFileSystemClient.getDirectoryClient("path/to/folder")).thenReturn(directoryClient);
+
+        when(directoryClient.getAccessControl()).thenReturn(pathAccessControl);
+        when(directoryClient.setAccessControlList(
+                        AccessControlUtils.getDefaultAccessControlEntries(), "group", "owner"))
+                .thenReturn(new PathInfo(null, null));
+        when(directoryClient.setAccessControlRecursive(AccessControlUtils.getDefaultAccessControlEntries()))
+                .thenReturn(accessControlChangeResult);
         when(dataLakeFileSystemClient.deleteDirectoryWithResponse("path/to/folder", true, null, null, null))
                 .thenReturn(null);
 
@@ -250,11 +274,23 @@ class AdlsGen2ServiceImplTest {
         DataLakeServiceClient dataLakeServiceClient = Mockito.mock(DataLakeServiceClient.class);
         DataLakeFileSystemClient dataLakeFileSystemClient = Mockito.mock(DataLakeFileSystemClient.class);
         DataLakeStorageException error = Mockito.mock(DataLakeStorageException.class);
+        DataLakeDirectoryClient directoryClient = Mockito.mock(DataLakeDirectoryClient.class);
 
-        String url = "https://storage-account.dfs.core.windows.net/container/path/to/folder";
+        AccessControlChangeResult accessControlChangeResult = new AccessControlChangeResult();
+        accessControlChangeResult.setCounters(new AccessControlChangeCounters().setFailedChangesCount(0));
+
+        PathAccessControl pathAccessControl = new PathAccessControl(null, null, "group", "owner");
 
         when(adlsGen2Service.getDataLakeServiceClient("storage-account")).thenReturn(dataLakeServiceClient);
         when(dataLakeServiceClient.getFileSystemClient("container")).thenReturn(dataLakeFileSystemClient);
+        when(dataLakeFileSystemClient.getDirectoryClient("path/to/folder")).thenReturn(directoryClient);
+
+        when(directoryClient.getAccessControl()).thenReturn(pathAccessControl);
+        when(directoryClient.setAccessControlList(
+                        AccessControlUtils.getDefaultAccessControlEntries(), "group", "owner"))
+                .thenReturn(new PathInfo(null, null));
+        when(directoryClient.setAccessControlRecursive(AccessControlUtils.getDefaultAccessControlEntries()))
+                .thenReturn(accessControlChangeResult);
         when(dataLakeFileSystemClient.deleteDirectoryWithResponse("path/to/folder", true, null, null, null))
                 .thenThrow(error);
         when(error.getErrorCode()).thenReturn("PathNotFound");
@@ -265,15 +301,66 @@ class AdlsGen2ServiceImplTest {
     }
 
     @Test
+    void deleteDirectoryReturnsAclError() {
+        DataLakeServiceClient dataLakeServiceClient = Mockito.mock(DataLakeServiceClient.class);
+        DataLakeFileSystemClient dataLakeFileSystemClient = Mockito.mock(DataLakeFileSystemClient.class);
+        DataLakeDirectoryClient directoryClient = Mockito.mock(DataLakeDirectoryClient.class);
+
+        AccessControlChangeResult accessControlChangeResult = new AccessControlChangeResult()
+                .setCounters(new AccessControlChangeCounters().setFailedChangesCount(2))
+                .setBatchFailures(List.of(
+                        new AccessControlChangeFailure().setErrorMessage("Error 1"),
+                        new AccessControlChangeFailure().setErrorMessage("Error 2")));
+
+        PathAccessControl pathAccessControl = new PathAccessControl(null, null, "group", "owner");
+
+        when(adlsGen2Service.getDataLakeServiceClient("storage-account")).thenReturn(dataLakeServiceClient);
+        when(dataLakeServiceClient.getFileSystemClient("container")).thenReturn(dataLakeFileSystemClient);
+        when(dataLakeFileSystemClient.getDirectoryClient("path/to/folder")).thenReturn(directoryClient);
+
+        when(directoryClient.getAccessControl()).thenReturn(pathAccessControl);
+        when(directoryClient.setAccessControlList(
+                        AccessControlUtils.getDefaultAccessControlEntries(), "group", "owner"))
+                .thenReturn(new PathInfo(null, null));
+        when(directoryClient.setAccessControlRecursive(AccessControlUtils.getDefaultAccessControlEntries()))
+                .thenReturn(accessControlChangeResult);
+        verify(dataLakeFileSystemClient, never()).deleteDirectoryWithResponse("path/to/folder", true, null, null, null);
+
+        var actualResult = adlsGen2Service.deleteDirectory("storage-account", "container", "path/to/folder", true);
+
+        var expectedDesc = List.of("Error 1", "Error 2");
+
+        Assertions.assertTrue(actualResult.isLeft());
+        Assertions.assertEquals(2, actualResult.getLeft().problems().size());
+        Assertions.assertEquals(
+                expectedDesc,
+                actualResult.getLeft().problems().stream()
+                        .map(Problem::description)
+                        .toList());
+    }
+
+    @Test
     void deleteDirectoryRemoveDataReturnsError() {
         DataLakeServiceClient dataLakeServiceClient = Mockito.mock(DataLakeServiceClient.class);
         DataLakeFileSystemClient dataLakeFileSystemClient = Mockito.mock(DataLakeFileSystemClient.class);
         DataLakeStorageException error = Mockito.mock(DataLakeStorageException.class);
+        DataLakeDirectoryClient directoryClient = Mockito.mock(DataLakeDirectoryClient.class);
 
-        String url = "https://storage-account.dfs.core.windows.net/container/path/to/folder";
+        AccessControlChangeResult accessControlChangeResult = new AccessControlChangeResult();
+        accessControlChangeResult.setCounters(new AccessControlChangeCounters().setFailedChangesCount(0));
+
+        PathAccessControl pathAccessControl = new PathAccessControl(null, null, "group", "owner");
 
         when(adlsGen2Service.getDataLakeServiceClient("storage-account")).thenReturn(dataLakeServiceClient);
         when(dataLakeServiceClient.getFileSystemClient("container")).thenReturn(dataLakeFileSystemClient);
+        when(dataLakeFileSystemClient.getDirectoryClient("path/to/folder")).thenReturn(directoryClient);
+
+        when(directoryClient.getAccessControl()).thenReturn(pathAccessControl);
+        when(directoryClient.setAccessControlList(
+                        AccessControlUtils.getDefaultAccessControlEntries(), "group", "owner"))
+                .thenReturn(new PathInfo(null, null));
+        when(directoryClient.setAccessControlRecursive(AccessControlUtils.getDefaultAccessControlEntries()))
+                .thenReturn(accessControlChangeResult);
         when(dataLakeFileSystemClient.deleteDirectoryWithResponse("path/to/folder", true, null, null, null))
                 .thenThrow(error);
         when(error.getErrorCode()).thenReturn("AuthorizationFailed");
@@ -296,11 +383,23 @@ class AdlsGen2ServiceImplTest {
     void deleteDirectoryRemoveDataReturnsGenericException() {
         DataLakeServiceClient dataLakeServiceClient = Mockito.mock(DataLakeServiceClient.class);
         DataLakeFileSystemClient dataLakeFileSystemClient = Mockito.mock(DataLakeFileSystemClient.class);
+        DataLakeDirectoryClient directoryClient = Mockito.mock(DataLakeDirectoryClient.class);
 
-        String url = "https://storage-account.dfs.core.windows.net/container/path/to/folder";
+        AccessControlChangeResult accessControlChangeResult = new AccessControlChangeResult();
+        accessControlChangeResult.setCounters(new AccessControlChangeCounters().setFailedChangesCount(0));
+
+        PathAccessControl pathAccessControl = new PathAccessControl(null, null, "group", "owner");
 
         when(adlsGen2Service.getDataLakeServiceClient("storage-account")).thenReturn(dataLakeServiceClient);
         when(dataLakeServiceClient.getFileSystemClient("container")).thenReturn(dataLakeFileSystemClient);
+        when(dataLakeFileSystemClient.getDirectoryClient("path/to/folder")).thenReturn(directoryClient);
+
+        when(directoryClient.getAccessControl()).thenReturn(pathAccessControl);
+        when(directoryClient.setAccessControlList(
+                        AccessControlUtils.getDefaultAccessControlEntries(), "group", "owner"))
+                .thenReturn(new PathInfo(null, null));
+        when(directoryClient.setAccessControlRecursive(AccessControlUtils.getDefaultAccessControlEntries()))
+                .thenReturn(accessControlChangeResult);
         when(dataLakeFileSystemClient.deleteDirectoryWithResponse("path/to/folder", true, null, null, null))
                 .thenThrow(new RuntimeException("Error!"));
 
@@ -314,6 +413,116 @@ class AdlsGen2ServiceImplTest {
         actualResult.getLeft().problems().forEach(p -> {
             Assertions.assertEquals(expectedDesc, p.description());
             Assertions.assertTrue(p.cause().isPresent());
+        });
+    }
+
+    @Test
+    void updateAclReturnsOk() {
+        var users = List.of("1234-abcd", "5678-90ef");
+
+        DataLakeServiceClient dataLakeServiceClient = Mockito.mock(DataLakeServiceClient.class);
+        DataLakeFileSystemClient dataLakeFileSystemClient = Mockito.mock(DataLakeFileSystemClient.class);
+        DataLakeDirectoryClient parentDirectoryClient = Mockito.mock(DataLakeDirectoryClient.class);
+        DataLakeDirectoryClient childDirectoryClient = Mockito.mock(DataLakeDirectoryClient.class);
+
+        when(adlsGen2Service.getDataLakeServiceClient("storage-account")).thenReturn(dataLakeServiceClient);
+        when(dataLakeServiceClient.getAccountName()).thenReturn("storage-account");
+        when(dataLakeServiceClient.getFileSystemClient("container")).thenReturn(dataLakeFileSystemClient);
+        lenient().when(dataLakeFileSystemClient.getDirectoryClient("")).thenReturn(parentDirectoryClient);
+        lenient()
+                .when(dataLakeFileSystemClient.getDirectoryClient("parentFolder"))
+                .thenReturn(parentDirectoryClient);
+        lenient()
+                .when(dataLakeFileSystemClient.getDirectoryClient("parentFolder/childFolder"))
+                .thenReturn(childDirectoryClient);
+
+        // Update parents with --x permissions
+        ArrayList<PathAccessControlEntry> parentEntries =
+                new ArrayList<>(AccessControlUtils.getDefaultAccessControlEntries());
+        parentEntries.add(PathAccessControlEntry.parse("user:1234-abcd:--x"));
+        PathAccessControl parentACL = new PathAccessControl(parentEntries, null, "group", "owner");
+
+        ArrayList<PathAccessControlEntry> parentUpdatedEntries = new ArrayList<>(parentEntries);
+        parentUpdatedEntries.add(PathAccessControlEntry.parse("user:5678-90ef:--x"));
+
+        when(parentDirectoryClient.getAccessControl()).thenReturn(parentACL);
+        when(parentDirectoryClient.setAccessControlList(parentUpdatedEntries, "group", "owner"))
+                .thenReturn(null);
+
+        // Update target child with r-x permissions
+        ArrayList<PathAccessControlEntry> childEntries = new ArrayList<>();
+        childEntries.add(PathAccessControlEntry.parse("user:1234-abcd:r-x"));
+        childEntries.add(PathAccessControlEntry.parse("default:user:1234-abcd:r-x"));
+        childEntries.add(PathAccessControlEntry.parse("user:5678-90ef:r-x"));
+        childEntries.add(PathAccessControlEntry.parse("default:user:5678-90ef:r-x"));
+        childEntries.addAll(AccessControlUtils.getDefaultAccessControlEntries());
+
+        AccessControlChangeResult accessControlChangeResult = new AccessControlChangeResult();
+        accessControlChangeResult.setCounters(new AccessControlChangeCounters().setFailedChangesCount(0));
+
+        when(childDirectoryClient.setAccessControlRecursive(childEntries)).thenReturn(accessControlChangeResult);
+
+        var actual = adlsGen2Service.updateAcl("storage-account", "container", "parentFolder/childFolder", users);
+
+        assertTrue(actual.isRight());
+    }
+
+    @Test
+    void updateAclFailsGrantRecursivelyOnTargetDirectory() {
+        var users = List.of("1234-abcd", "5678-90ef");
+
+        DataLakeServiceClient dataLakeServiceClient = Mockito.mock(DataLakeServiceClient.class);
+        DataLakeFileSystemClient dataLakeFileSystemClient = Mockito.mock(DataLakeFileSystemClient.class);
+        DataLakeDirectoryClient parentDirectoryClient = Mockito.mock(DataLakeDirectoryClient.class);
+        DataLakeDirectoryClient childDirectoryClient = Mockito.mock(DataLakeDirectoryClient.class);
+
+        when(adlsGen2Service.getDataLakeServiceClient("storage-account")).thenReturn(dataLakeServiceClient);
+        when(dataLakeServiceClient.getAccountName()).thenReturn("storage-account");
+        when(dataLakeServiceClient.getFileSystemClient("container")).thenReturn(dataLakeFileSystemClient);
+        lenient().when(dataLakeFileSystemClient.getDirectoryClient("")).thenReturn(parentDirectoryClient);
+        lenient()
+                .when(dataLakeFileSystemClient.getDirectoryClient("parentFolder"))
+                .thenReturn(parentDirectoryClient);
+        lenient()
+                .when(dataLakeFileSystemClient.getDirectoryClient("parentFolder/childFolder"))
+                .thenReturn(childDirectoryClient);
+
+        // Update parents with --x permissions
+        ArrayList<PathAccessControlEntry> parentEntries =
+                new ArrayList<>(AccessControlUtils.getDefaultAccessControlEntries());
+        parentEntries.add(PathAccessControlEntry.parse("user:1234-abcd:--x"));
+        PathAccessControl parentACL = new PathAccessControl(parentEntries, null, "group", "owner");
+
+        ArrayList<PathAccessControlEntry> parentUpdatedEntries = new ArrayList<>(parentEntries);
+        parentUpdatedEntries.add(PathAccessControlEntry.parse("user:5678-90ef:--x"));
+
+        when(parentDirectoryClient.getAccessControl()).thenReturn(parentACL);
+        when(parentDirectoryClient.setAccessControlList(parentUpdatedEntries, "group", "owner"))
+                .thenReturn(null);
+
+        // Update target child with r-x permissions
+        ArrayList<PathAccessControlEntry> childEntries = new ArrayList<>();
+        childEntries.add(PathAccessControlEntry.parse("user:1234-abcd:r-x"));
+        childEntries.add(PathAccessControlEntry.parse("default:user:1234-abcd:r-x"));
+        childEntries.add(PathAccessControlEntry.parse("user:5678-90ef:r-x"));
+        childEntries.add(PathAccessControlEntry.parse("default:user:5678-90ef:r-x"));
+        childEntries.addAll(AccessControlUtils.getDefaultAccessControlEntries());
+
+        String expectedDesc = "Error!";
+        AccessControlChangeResult accessControlChangeResult = new AccessControlChangeResult();
+        accessControlChangeResult
+                .setCounters(new AccessControlChangeCounters().setFailedChangesCount(1))
+                .setBatchFailures(List.of(new AccessControlChangeFailure().setErrorMessage(expectedDesc)));
+
+        when(childDirectoryClient.setAccessControlRecursive(childEntries)).thenReturn(accessControlChangeResult);
+
+        var actualResult = adlsGen2Service.updateAcl("storage-account", "container", "parentFolder/childFolder", users);
+
+        Assertions.assertTrue(actualResult.isLeft());
+        Assertions.assertEquals(1, actualResult.getLeft().problems().size());
+        actualResult.getLeft().problems().forEach(p -> {
+            Assertions.assertEquals(expectedDesc, p.description());
+            Assertions.assertTrue(p.cause().isEmpty());
         });
     }
 

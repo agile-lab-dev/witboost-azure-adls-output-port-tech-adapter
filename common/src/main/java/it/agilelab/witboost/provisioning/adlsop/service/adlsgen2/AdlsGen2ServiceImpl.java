@@ -9,15 +9,15 @@ import com.azure.resourcemanager.resourcegraph.models.QueryRequest;
 import com.azure.resourcemanager.resourcegraph.models.QueryResponse;
 import com.azure.storage.file.datalake.DataLakeServiceClient;
 import com.azure.storage.file.datalake.DataLakeServiceClientBuilder;
-import com.azure.storage.file.datalake.models.DataLakeStorageException;
+import com.azure.storage.file.datalake.models.*;
 import io.vavr.control.Either;
+import io.vavr.control.Option;
 import it.agilelab.witboost.provisioning.adlsop.common.FailedOperation;
 import it.agilelab.witboost.provisioning.adlsop.common.Problem;
 import it.agilelab.witboost.provisioning.adlsop.model.AdlsGen2DirectoryInfo;
 import it.agilelab.witboost.provisioning.adlsop.model.StorageAccountInfo;
 import it.agilelab.witboost.provisioning.adlsop.parser.Parser;
-import java.util.Collections;
-import java.util.Optional;
+import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -88,14 +88,13 @@ public class AdlsGen2ServiceImpl implements AdlsGen2Service {
                 var storageAccountInfo = getStorageAccountInfo(storageAccount);
                 return storageAccountInfo.map(info -> {
                     log.info("Retrieved storage account information: {}", info);
-                    var response = new AdlsGen2DirectoryInfo(
+                    return new AdlsGen2DirectoryInfo(
                             storageAccount,
                             containerName,
                             path,
                             directoryClient.getDirectoryUrl(),
                             getStorageBrowserUrl(info),
                             null);
-                    return response;
                 });
             }
             var error = String.format(
@@ -125,7 +124,29 @@ public class AdlsGen2ServiceImpl implements AdlsGen2Service {
                     storageAccount);
             var dataLakeServiceClient = getDataLakeServiceClient(storageAccount);
             var dataLakeFileSystemClient = dataLakeServiceClient.getFileSystemClient(containerName);
-            // TODO Remove ACL
+            var directoryClient = dataLakeFileSystemClient.getDirectoryClient(path);
+
+            log.info(
+                    "Resetting ACLs in directory '{}' in container '{}' in storage account '{}'",
+                    path,
+                    containerName,
+                    storageAccount);
+            // Remove all ACLs, leaving the default owner, group and other entries
+            var defaultPermissions = AccessControlUtils.getDefaultAccessControlEntries();
+            var aclResult = directoryClient.setAccessControlRecursive(defaultPermissions);
+            directoryClient.setAccessControlList(
+                    defaultPermissions,
+                    directoryClient.getAccessControl().getGroup(),
+                    directoryClient.getAccessControl().getOwner());
+
+            if (aclResult.getCounters().getFailedChangesCount() != 0) {
+                log.error("Error resetting ACLs: {}", aclResult.getBatchFailures());
+                return left(new FailedOperation(aclResult.getBatchFailures().stream()
+                        .map(failure -> new Problem(failure.getErrorMessage()))
+                        .toList()));
+            }
+            log.info("ACLs reset successful");
+
             if (removeData) {
                 log.info(
                         "removeData is true. Deleting directory '{}' in container '{}' in storage account '{}'",
@@ -186,6 +207,171 @@ public class AdlsGen2ServiceImpl implements AdlsGen2Service {
                     return Either.left(new FailedOperation(
                             Collections.singletonList(new Problem(getFailedMessage(errorMessage, Optional.empty())))));
                 }));
+    }
+
+    /**
+     * Performs the update ACL operation on a directory, giving execute (--x) permissions on the parent directories, and
+     * read and execute (r-x) on the directory itself to the list of objectIds passed as parameter. It attempts all permissions
+     * grants and then accumulates the results, returning a single FailedOperation in case of error
+     * @param storageAccount Storage account name
+     * @param containerName Container name
+     * @param path Directory to grant r-x permissions
+     * @param usersObjectId List of users objectIds to grant access
+     * @return {@code Either.left(FailedOperation) } on failed attempt
+     */
+    public Either<FailedOperation, Void> updateAcl(
+            String storageAccount, String containerName, String path, List<String> usersObjectId) {
+        var subDirectories = path.split("/");
+        String subPath = "";
+
+        var dataLakeServiceClient = getDataLakeServiceClient(storageAccount);
+
+        List<Either<FailedOperation, Void>> results = new ArrayList<>();
+        for (String subDirectory : subDirectories) {
+            RolePermissions userPermission = new RolePermissions();
+            userPermission.setReadPermission(false).setWritePermission(false).setExecutePermission(true);
+            var result = grantACL(
+                    dataLakeServiceClient, containerName, subPath, usersObjectId, userPermission, false, false, false);
+            results.add(result);
+            subPath += subDirectory + "/";
+        }
+        RolePermissions userPermission = new RolePermissions();
+        userPermission.setReadPermission(true).setWritePermission(false).setExecutePermission(true);
+        var result =
+                grantACL(dataLakeServiceClient, containerName, path, usersObjectId, userPermission, true, true, true);
+        results.add(result);
+
+        return FailedOperation.combineEither(right(null), results, (a, b) -> a);
+    }
+
+    /**
+     * Grants permission on a single path of a container in a storage account for a list of users objectId
+     * @param dataLakeServiceClient DataLakeServiceClient for the storage account, it is passed as argument to avoid authenticating for each single ACL request
+     * @param containerName Container name
+     * @param path Target directory
+     * @param usersObjectId List of users objectIds to grant permission
+     * @param userPermission Type of permission to be granted
+     * @param grantRecursively Whether to grant the permission recursively on all child paths
+     * @param addAsDefaultScope Whether to add the users as default ACL for new child objects of target directory
+     * @param overridePermissions Whether to override the existing ACL permissions on target directory
+     * @return {@code Either.left(FailedOperation) } on failed attempt
+     */
+    private Either<FailedOperation, Void> grantACL(
+            DataLakeServiceClient dataLakeServiceClient,
+            String containerName,
+            String path,
+            List<String> usersObjectId,
+            RolePermissions userPermission,
+            boolean grantRecursively,
+            boolean addAsDefaultScope,
+            boolean overridePermissions) {
+        try {
+            log.info(
+                    "Granting ACL to {} on path {} on container {} on storage account {} with configs: grantRecursively={}, addAsDefaultScope={}, overridePermissions={}",
+                    usersObjectId,
+                    path,
+                    containerName,
+                    dataLakeServiceClient.getAccountName(),
+                    grantRecursively,
+                    addAsDefaultScope,
+                    overridePermissions);
+
+            var fsClient = dataLakeServiceClient.getFileSystemClient(containerName);
+            // Azure doesn't like a / as initial character
+            var directoryClient = fsClient.getDirectoryClient(removeTrailingLeadingSlash(path));
+
+            ArrayList<PathAccessControlEntry> accessControlEntries = new ArrayList<>(usersObjectId.stream()
+                    .flatMap(objectId -> {
+                        ArrayList<PathAccessControlEntry> entries = new ArrayList<>();
+
+                        PathAccessControlEntry userEntry = AccessControlUtils.buildPathAccessControlEntry(
+                                userPermission, AccessControlType.USER, false, Option.of(objectId));
+                        entries.add(userEntry);
+
+                        if (addAsDefaultScope) {
+                            PathAccessControlEntry defaultUserEntry = AccessControlUtils.buildPathAccessControlEntry(
+                                    userPermission, AccessControlType.USER, true, Option.of(objectId));
+                            entries.add(defaultUserEntry);
+                        }
+                        return entries.stream();
+                    })
+                    .toList());
+
+            if (overridePermissions) {
+                // If we override permissions we need to ensure owner user, group and other roles
+                // are present on the ACL list
+                accessControlEntries.addAll(AccessControlUtils.getDefaultAccessControlEntries());
+            }
+
+            if (grantRecursively) {
+                AccessControlChangeResult result;
+                if (overridePermissions) {
+                    log.info("Overriding ACL recursively on path '{}' with entries {}", path, accessControlEntries);
+                    result = directoryClient.setAccessControlRecursive(accessControlEntries);
+                } else {
+                    log.info("Updating ACL recursively on path '{}' with entries {}", path, accessControlEntries);
+                    result = directoryClient.updateAccessControlRecursive(accessControlEntries);
+                }
+
+                if (result.getCounters().getFailedChangesCount() == 0) {
+                    return right(null);
+                } else {
+                    return left(new FailedOperation(result.getBatchFailures().stream()
+                            .map(failure -> new Problem(failure.getErrorMessage()))
+                            .toList()));
+                }
+            } else {
+                if (overridePermissions) {
+                    log.info("Overriding ACL non-recursively on path '{}' with entries {}", path, accessControlEntries);
+                    directoryClient.setAccessControlList(
+                            accessControlEntries,
+                            directoryClient.getAccessControl().getGroup(),
+                            directoryClient.getAccessControl().getOwner());
+
+                } else {
+                    // SDK doesn't provide a way to update non-recursively, so we have to get the current ACL and
+                    // compare it with the one we are using, updating the entries in common and adding the missing ones.
+                    // Note that this doesn't remove usersObjectId that are not in our ACL anymore, as we cannot be sure
+                    // that they aren't managed by another component/provisioner
+                    List<PathAccessControlEntry> pathAccessControlEntries =
+                            directoryClient.getAccessControl().getAccessControlList();
+
+                    accessControlEntries.forEach(entry -> pathAccessControlEntries.stream()
+                            .filter(allEntry -> allEntry.getEntityId() != null
+                                    && allEntry.getEntityId().equals(entry.getEntityId()))
+                            .findFirst()
+                            .ifPresentOrElse(
+                                    pathAccessControlEntry -> {
+                                        var idx = pathAccessControlEntries.indexOf(pathAccessControlEntry);
+                                        pathAccessControlEntries.set(idx, entry);
+                                    },
+                                    () -> pathAccessControlEntries.add(entry)));
+
+                    log.info(
+                            "Updating ACL non-recursively on path '{}' with entries {}",
+                            path,
+                            pathAccessControlEntries);
+                    directoryClient.setAccessControlList(
+                            pathAccessControlEntries,
+                            directoryClient.getAccessControl().getGroup(),
+                            directoryClient.getAccessControl().getOwner());
+                }
+                return right(null);
+            }
+        } catch (Exception e) {
+            log.error(
+                    String.format(
+                            "Error while updating the ACLs on the path '%s' of container '%s' in storage account '%s'",
+                            path, containerName, dataLakeServiceClient.getAccountName()),
+                    e);
+            return Either.left(new FailedOperation(Collections.singletonList(new Problem(
+                    getFailedMessage(
+                            String.format(
+                                    "Failed to update the ACLs on path '%s' in container '%s' in storage account '%s'",
+                                    path, containerName, dataLakeServiceClient.getAccountName()),
+                            Optional.of(e)),
+                    e))));
+        }
     }
 
     public String removeTrailingLeadingSlash(String path) {

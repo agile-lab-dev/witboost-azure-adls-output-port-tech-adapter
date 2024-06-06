@@ -4,6 +4,7 @@ import it.agilelab.witboost.provisioning.adlsop.api.ApiServiceImpl;
 import it.agilelab.witboost.provisioning.adlsop.openapi.controller.V1ApiDelegate;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ProvisioningRequest;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ProvisioningStatus;
+import it.agilelab.witboost.provisioning.adlsop.openapi.model.UpdateAclRequest;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ValidationResult;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -37,5 +38,10 @@ public class SpecificProvisionerController implements V1ApiDelegate {
     @Override
     public ResponseEntity<ValidationResult> validate(ProvisioningRequest provisioningRequest) {
         return ResponseEntity.ok(apiService.validate(provisioningRequest));
+    }
+
+    @Override
+    public ResponseEntity<ProvisioningStatus> updateacl(UpdateAclRequest updateAclRequest) {
+        return ResponseEntity.ok(apiService.updateAcl(updateAclRequest));
     }
 }

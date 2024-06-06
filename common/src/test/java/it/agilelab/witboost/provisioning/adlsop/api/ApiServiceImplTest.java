@@ -4,6 +4,8 @@ import static io.vavr.control.Either.left;
 import static io.vavr.control.Either.right;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -13,10 +15,12 @@ import it.agilelab.witboost.provisioning.adlsop.common.FailedOperation;
 import it.agilelab.witboost.provisioning.adlsop.common.Problem;
 import it.agilelab.witboost.provisioning.adlsop.common.SpecificProvisionerValidationException;
 import it.agilelab.witboost.provisioning.adlsop.model.*;
+import it.agilelab.witboost.provisioning.adlsop.openapi.model.*;
+import it.agilelab.witboost.provisioning.adlsop.openapi.model.ProvisionInfo;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ProvisioningRequest;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ProvisioningStatus;
+import it.agilelab.witboost.provisioning.adlsop.openapi.model.UpdateAclRequest;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ValidationError;
-import it.agilelab.witboost.provisioning.adlsop.openapi.model.ValidationResult;
 import it.agilelab.witboost.provisioning.adlsop.service.provision.OutputPortHandler;
 import it.agilelab.witboost.provisioning.adlsop.service.validation.ValidationService;
 import java.util.Collections;
@@ -190,6 +194,68 @@ public class ApiServiceImplTest {
 
         var ex = assertThrows(
                 SpecificProvisionerValidationException.class, () -> provisionService.unprovision(provisioningRequest));
+        assertEquals(failedOperation, ex.getFailedOperation());
+    }
+
+    @Test
+    public void testUpdateAclValidationError() {
+        UpdateAclRequest updateAclRequest = new UpdateAclRequest(List.of(), new ProvisionInfo("request", ""));
+        var failedOperation = new FailedOperation(Collections.singletonList(new Problem("error")));
+        when(validationService.validate(any(ProvisioningRequest.class), eq(true)))
+                .thenReturn(left(failedOperation));
+
+        var ex = assertThrows(
+                SpecificProvisionerValidationException.class, () -> provisionService.updateAcl(updateAclRequest));
+        assertEquals(failedOperation, ex.getFailedOperation());
+    }
+
+    @Test
+    public void testUpdateAclUnsupportedKind() {
+        UpdateAclRequest updateAclRequest = new UpdateAclRequest(List.of(), new ProvisionInfo("request", ""));
+        OutputPort<Specific> outputPort = new OutputPort<>();
+        outputPort.setKind("unsupported");
+        when(validationService.validate(any(ProvisioningRequest.class), eq(true)))
+                .thenReturn(right(new ProvisionRequest<>(null, outputPort, false)));
+        String expectedDesc = "The kind 'unsupported' of the component is not supported by this Specific Provisioner";
+        var failedOperation = new FailedOperation(Collections.singletonList(new Problem(expectedDesc)));
+
+        var ex = assertThrows(
+                SpecificProvisionerValidationException.class, () -> provisionService.updateAcl(updateAclRequest));
+        assertEquals(failedOperation, ex.getFailedOperation());
+    }
+
+    @Test
+    public void testUpdateAclOutputPortOk() {
+        var users = List.of("user:john.doe_agilelab.it", "user:alice_agilelab.it");
+        UpdateAclRequest updateAclRequest = new UpdateAclRequest(users, new ProvisionInfo("request", ""));
+        OutputPort<Specific> outputPort = new OutputPort<>();
+        outputPort.setKind("outputport");
+        var expectedRes = new ProvisioningStatus(ProvisioningStatus.StatusEnum.COMPLETED, "");
+        var provisionRequest = new ProvisionRequest<>(null, outputPort, false);
+        when(validationService.validate(any(ProvisioningRequest.class), eq(true)))
+                .thenReturn(right(provisionRequest));
+        when(outputPortHandler.updateAcl(users, provisionRequest)).thenReturn(right(expectedRes));
+
+        var actualRes = provisionService.updateAcl(updateAclRequest);
+
+        assertEquals(expectedRes, actualRes);
+    }
+
+    @Test
+    public void testUpdateAclOutputPortFailHandler() {
+        var users = List.of("user:john.doe_agilelab.it", "user:alice_agilelab.it");
+        UpdateAclRequest updateAclRequest = new UpdateAclRequest(users, new ProvisionInfo("request", ""));
+        OutputPort<Specific> outputPort = new OutputPort<>();
+        outputPort.setKind("outputport");
+        var provisionRequest = new ProvisionRequest<>(null, outputPort, false);
+        when(validationService.validate(any(ProvisioningRequest.class), eq(true)))
+                .thenReturn(right(provisionRequest));
+        String expectedDesc = "Error on ADLS";
+        var failedOperation = new FailedOperation(Collections.singletonList(new Problem(expectedDesc)));
+        when(outputPortHandler.updateAcl(users, provisionRequest)).thenReturn(left(failedOperation));
+
+        var ex = assertThrows(
+                SpecificProvisionerValidationException.class, () -> provisionService.updateAcl(updateAclRequest));
         assertEquals(failedOperation, ex.getFailedOperation());
     }
 }
