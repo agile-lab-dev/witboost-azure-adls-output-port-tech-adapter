@@ -2,7 +2,11 @@ package it.agilelab.witboost.provisioning.adlsop.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.JsonNode;
+import io.vavr.control.Either;
 import io.vavr.control.Option;
+import it.agilelab.witboost.provisioning.adlsop.common.FailedOperation;
+import it.agilelab.witboost.provisioning.adlsop.common.Problem;
+import it.agilelab.witboost.provisioning.adlsop.parser.Parser;
 import java.util.List;
 import java.util.Optional;
 import lombok.Getter;
@@ -48,5 +52,18 @@ public class DataProduct {
                 .findFirst()
                 .flatMap(c -> Optional.ofNullable(c.get("kind")))
                 .map(JsonNode::textValue)));
+    }
+
+    public <U> Either<FailedOperation, U> getDeployInfo(String componentId, Class<U> infoClass) {
+        return getComponentToProvision(componentId)
+                .toEither(missingDeployInfo(componentId))
+                .flatMap(s ->
+                        Option.when(s.hasNonNull("info"), s.get("info")).toEither(() -> missingDeployInfo(componentId)))
+                .flatMap(info -> Parser.parseObject(info, infoClass));
+    }
+
+    private FailedOperation missingDeployInfo(String componentId) {
+        String errorMessage = String.format("Failed retrieving deploy info from component %s", componentId);
+        return new FailedOperation(List.of(new Problem(errorMessage)));
     }
 }

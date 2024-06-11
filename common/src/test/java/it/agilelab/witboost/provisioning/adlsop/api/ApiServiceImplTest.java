@@ -2,6 +2,7 @@ package it.agilelab.witboost.provisioning.adlsop.api;
 
 import static io.vavr.control.Either.left;
 import static io.vavr.control.Either.right;
+import static it.agilelab.witboost.provisioning.adlsop.common.TestFixtures.buildConstraintViolation;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,6 +16,7 @@ import it.agilelab.witboost.provisioning.adlsop.common.FailedOperation;
 import it.agilelab.witboost.provisioning.adlsop.common.Problem;
 import it.agilelab.witboost.provisioning.adlsop.common.SpecificProvisionerValidationException;
 import it.agilelab.witboost.provisioning.adlsop.model.*;
+import it.agilelab.witboost.provisioning.adlsop.model.azure.AdlsGen2DirectoryInfo;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.*;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ProvisionInfo;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ProvisioningRequest;
@@ -23,8 +25,11 @@ import it.agilelab.witboost.provisioning.adlsop.openapi.model.UpdateAclRequest;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ValidationError;
 import it.agilelab.witboost.provisioning.adlsop.service.provision.OutputPortHandler;
 import it.agilelab.witboost.provisioning.adlsop.service.validation.ValidationService;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,6 +74,20 @@ public class ApiServiceImplTest {
     }
 
     @Test
+    public void testValidateThrowsConstraintException() {
+        ProvisioningRequest provisioningRequest = new ProvisioningRequest();
+        Set<ConstraintViolation<?>> violations = Set.of(buildConstraintViolation("is not valid", "path.to.field"));
+        ConstraintViolationException error = new ConstraintViolationException(violations);
+
+        when(validationService.validate(provisioningRequest, false)).thenThrow(error);
+        var expectedRes = new ValidationResult(false).error(new ValidationError(List.of("path.to.field is not valid")));
+
+        var actualRes = provisionService.validate(provisioningRequest);
+
+        Assertions.assertEquals(expectedRes, actualRes);
+    }
+
+    @Test
     public void testProvisionValidationError() {
         ProvisioningRequest provisioningRequest = new ProvisioningRequest();
         var failedOperation = new FailedOperation(Collections.singletonList(new Problem("error")));
@@ -98,7 +117,6 @@ public class ApiServiceImplTest {
     public void testProvisionOutputPortOk() throws JsonProcessingException {
         ProvisioningRequest provisioningRequest = new ProvisioningRequest();
         OutputPortSpecific outputPortSpecific = new OutputPortSpecific();
-        outputPortSpecific.setStorageAccount("storageAccount");
         outputPortSpecific.setContainer("containerName");
         outputPortSpecific.setPath("path");
         outputPortSpecific.setFileFormat("CSV");

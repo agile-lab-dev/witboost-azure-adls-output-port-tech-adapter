@@ -3,6 +3,7 @@ package it.agilelab.witboost.provisioning.adlsop.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.util.Optional;
@@ -22,6 +23,7 @@ import org.springframework.validation.annotation.Validated;
         visible = true)
 @JsonSubTypes({
     @JsonSubTypes.Type(value = OutputPort.class, name = "outputport"),
+    @JsonSubTypes.Type(value = StorageArea.class, name = "storage"),
 })
 @Validated
 public abstract class Component<T> {
@@ -42,4 +44,6 @@ public abstract class Component<T> {
 
     @NotNull
     private @Valid T specific;
+
+    private Optional<JsonNode> info;
 }

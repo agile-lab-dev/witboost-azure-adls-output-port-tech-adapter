@@ -44,7 +44,7 @@ public class ValidationServiceTest {
 
     @Test
     public void testValidateOutputPortWithStorageAccountOk() throws IOException {
-        String ymlDescriptor = ResourceUtils.getContentFromResource("/pr_descriptor_outputport.yml");
+        String ymlDescriptor = ResourceUtils.getContentFromResource("/pr_descriptor_outputport_with_storage_dep.yml");
         ProvisioningRequest provisioningRequest =
                 new ProvisioningRequest(DescriptorKind.COMPONENT_DESCRIPTOR, ymlDescriptor, false);
 

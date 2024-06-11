@@ -11,7 +11,7 @@ import it.agilelab.witboost.provisioning.adlsop.common.FailedOperation;
 import it.agilelab.witboost.provisioning.adlsop.common.Problem;
 import it.agilelab.witboost.provisioning.adlsop.model.Component;
 import it.agilelab.witboost.provisioning.adlsop.model.Descriptor;
-import it.agilelab.witboost.provisioning.adlsop.model.StorageAccountInfo;
+import it.agilelab.witboost.provisioning.adlsop.model.azure.StorageAccountInfo;
 import java.util.Collections;
 import java.util.List;
 import org.slf4j.Logger;
@@ -57,6 +57,19 @@ public class Parser {
                     JavaType javaType =
                             mapper.getTypeFactory().constructParametricType(List.class, StorageAccountInfo.class);
                     return mapper.<List<StorageAccountInfo>>convertValue(node, javaType);
+                })
+                .toEither()
+                .mapLeft(throwable -> {
+                    String errorMessage = "Failed to deserialize the component. Details: " + throwable.getMessage();
+                    logger.error(errorMessage, throwable);
+                    return new FailedOperation(Collections.singletonList(new Problem(errorMessage, throwable)));
+                });
+    }
+
+    public static <T> Either<FailedOperation, T> parseObject(JsonNode node, Class<T> clazz) {
+        return Try.of(() -> {
+                    JavaType javaType = mapper.getTypeFactory().constructType(clazz);
+                    return mapper.<T>treeToValue(node, javaType);
                 })
                 .toEither()
                 .mapLeft(throwable -> {

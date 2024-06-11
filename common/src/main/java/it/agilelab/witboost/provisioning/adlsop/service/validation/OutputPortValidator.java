@@ -7,6 +7,7 @@ import io.vavr.control.Either;
 import it.agilelab.witboost.provisioning.adlsop.common.FailedOperation;
 import it.agilelab.witboost.provisioning.adlsop.common.Problem;
 import it.agilelab.witboost.provisioning.adlsop.model.*;
+import it.agilelab.witboost.provisioning.adlsop.parser.Parser;
 import it.agilelab.witboost.provisioning.adlsop.service.adlsgen2.AdlsGen2Service;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -19,7 +20,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public class OutputPortValidator {
     private static final Logger logger = LoggerFactory.getLogger(OutputPortValidator.class);
-
+    private static final String STORAGE_KIND = "storage";
     private final AdlsGen2Service adlsGen2Service;
 
     public OutputPortValidator(AdlsGen2Service adlsGen2Service) {
@@ -41,19 +42,61 @@ public class OutputPortValidator {
         if (component instanceof OutputPort<? extends Specific> op) {
             logger.info("The received component is an Output Port");
             if (op.getSpecific() instanceof OutputPortSpecific specific) {
-                if (validateStorageAccountExists) {
-                    return this.adlsGen2Service
-                            .containerExists(specific.getStorageAccount(), specific.getContainer())
-                            .flatMap(exists -> {
-                                if (!exists) {
-                                    String errorMessage = String.format(
-                                            "The container '%s' on storage account '%s' doesn't exist",
-                                            specific.getContainer(), specific.getStorageAccount());
-                                    return left(
-                                            new FailedOperation(Collections.singletonList(new Problem(errorMessage))));
-                                }
-                                return right(null);
-                            });
+                if (op.getDependsOn() != null && !op.getDependsOn().isEmpty()) {
+                    // Check dependency is a storage
+                    String storageComponentId = op.getDependsOn().get(0);
+                    var optionalDependentComponentAsJson = dataProduct.getComponentToProvision(storageComponentId);
+                    if (optionalDependentComponentAsJson.isEmpty()) {
+                        String errorMessage = String.format(
+                                "Output Port dependency %s not found in the descriptor", storageComponentId);
+                        logger.error(errorMessage);
+                        return left(new FailedOperation(Collections.singletonList(new Problem(errorMessage))));
+                    }
+                    var dependentComponentAsJson = optionalDependentComponentAsJson.get();
+                    logger.info("Parsing Output Port dependency {}", storageComponentId);
+                    var eitherDependentComponent = Parser.parseComponent(dependentComponentAsJson, Specific.class);
+                    if (eitherDependentComponent.isLeft()) return left(eitherDependentComponent.getLeft());
+                    var dependentComponent = eitherDependentComponent.get();
+                    logger.info("Checking dependency {} to have 'kind' field equal to 'storage'", storageComponentId);
+                    if (!STORAGE_KIND.equalsIgnoreCase(dependentComponent.getKind())) {
+                        String errorMessage = String.format(
+                                "Component '%s' has unexpected kind for an output port dependency. Expected: %s, found: %s",
+                                dependentComponent.getId(), STORAGE_KIND, dependentComponent.getKind());
+                        logger.error(errorMessage);
+                        return left(new FailedOperation(Collections.singletonList(new Problem(errorMessage))));
+                    }
+
+                    if (validateStorageAccountExists) {
+                        logger.info("Validating if storage account exists on configured Azure environment");
+                        logger.info(
+                                "Extracting storage account name from deployInfo of component '{}'",
+                                storageComponentId);
+                        return dataProduct
+                                .getDeployInfo(storageComponentId, StorageDeployInfo.class)
+                                .flatMap(StorageDeployInfo::getStorageAccountName)
+                                .flatMap(storageAccountName -> {
+                                    logger.info(
+                                            "Found storage account name: '{}', checking for existence",
+                                            storageAccountName);
+                                    return this.adlsGen2Service
+                                            .containerExists(storageAccountName, specific.getContainer())
+                                            .flatMap(exists -> {
+                                                if (!exists) {
+                                                    String errorMessage = String.format(
+                                                            "The container '%s' on storage account '%s' doesn't exist",
+                                                            specific.getContainer(), storageAccountName);
+                                                    return left(new FailedOperation(
+                                                            Collections.singletonList(new Problem(errorMessage))));
+                                                }
+                                                return right(null);
+                                            });
+                                });
+                    }
+                } else {
+                    String errorMessage = String.format(
+                            "The component %s must have one dependency on a storage component", component.getId());
+                    logger.error(errorMessage);
+                    return left(new FailedOperation(Collections.singletonList(new Problem(errorMessage))));
                 }
             } else {
                 String errorMessage = String.format(

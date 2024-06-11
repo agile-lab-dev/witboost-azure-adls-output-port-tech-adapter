@@ -1,4 +1,4 @@
-package it.agilelab.witboost.provisioning.adlsop.model;
+package it.agilelab.witboost.provisioning.adlsop.model.azure;
 
 import lombok.*;
 

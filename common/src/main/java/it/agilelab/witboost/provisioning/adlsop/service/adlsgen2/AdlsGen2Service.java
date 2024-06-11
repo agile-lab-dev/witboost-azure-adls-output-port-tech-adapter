@@ -2,8 +2,8 @@ package it.agilelab.witboost.provisioning.adlsop.service.adlsgen2;
 
 import io.vavr.control.Either;
 import it.agilelab.witboost.provisioning.adlsop.common.FailedOperation;
-import it.agilelab.witboost.provisioning.adlsop.model.AdlsGen2DirectoryInfo;
-import it.agilelab.witboost.provisioning.adlsop.model.StorageAccountInfo;
+import it.agilelab.witboost.provisioning.adlsop.model.azure.AdlsGen2DirectoryInfo;
+import it.agilelab.witboost.provisioning.adlsop.model.azure.StorageAccountInfo;
 import java.util.List;
 
 public interface AdlsGen2Service {

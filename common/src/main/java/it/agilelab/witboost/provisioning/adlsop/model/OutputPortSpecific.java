@@ -14,9 +14,6 @@ import lombok.Setter;
 public class OutputPortSpecific extends Specific {
 
     @NotBlank
-    String storageAccount;
-
-    @NotBlank
     String container;
 
     @NotBlank

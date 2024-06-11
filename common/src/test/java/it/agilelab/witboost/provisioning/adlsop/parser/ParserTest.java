@@ -1,8 +1,14 @@
 package it.agilelab.witboost.provisioning.adlsop.parser;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import it.agilelab.witboost.provisioning.adlsop.model.Descriptor;
 import it.agilelab.witboost.provisioning.adlsop.model.Specific;
+import it.agilelab.witboost.provisioning.adlsop.model.StorageDeployInfo;
 import it.agilelab.witboost.provisioning.adlsop.util.ResourceUtils;
 import java.io.IOException;
 import org.junit.jupiter.api.Assertions;
@@ -16,7 +22,7 @@ public class ParserTest {
 
         var actualResult = Parser.parseDescriptor(ymlDescriptor);
 
-        Assertions.assertTrue(actualResult.isRight());
+        assertTrue(actualResult.isRight());
     }
 
     @Test
@@ -25,7 +31,7 @@ public class ParserTest {
 
         var actualResult = Parser.parseDescriptor(ymlDescriptor);
 
-        Assertions.assertTrue(actualResult.isRight());
+        assertTrue(actualResult.isRight());
     }
 
     @Test
@@ -34,7 +40,7 @@ public class ParserTest {
 
         var actualResult = Parser.parseDescriptor(ymlDescriptor);
 
-        Assertions.assertTrue(actualResult.isRight());
+        assertTrue(actualResult.isRight());
     }
 
     @Test
@@ -44,11 +50,11 @@ public class ParserTest {
 
         var actualRes = Parser.parseDescriptor(invalidDescriptor);
 
-        Assertions.assertTrue(actualRes.isLeft());
+        assertTrue(actualRes.isLeft());
         Assertions.assertEquals(1, actualRes.getLeft().problems().size());
         actualRes.getLeft().problems().forEach(p -> {
-            Assertions.assertTrue(p.description().startsWith(expectedDesc));
-            Assertions.assertTrue(p.cause().isPresent());
+            assertTrue(p.description().startsWith(expectedDesc));
+            assertTrue(p.cause().isPresent());
         });
     }
 
@@ -56,16 +62,16 @@ public class ParserTest {
     public void testParseOutputPortComponentOk() throws IOException {
         String ymlDescriptor = ResourceUtils.getContentFromResource("/pr_descriptor_outputport.yml");
         var eitherDescriptor = Parser.parseDescriptor(ymlDescriptor);
-        Assertions.assertTrue(eitherDescriptor.isRight());
+        assertTrue(eitherDescriptor.isRight());
         Descriptor descriptor = eitherDescriptor.get();
         String componentIdToProvision = "urn:dmb:cmp:healthcare:vaccinations:0:hdfs-output-port";
         var optionalComponent = descriptor.getDataProduct().getComponentToProvision(componentIdToProvision);
-        Assertions.assertTrue(optionalComponent.isDefined());
+        assertTrue(optionalComponent.isDefined());
         JsonNode component = optionalComponent.get();
 
         var actualRes = Parser.parseComponent(component, Specific.class);
 
-        Assertions.assertTrue(actualRes.isRight());
+        assertTrue(actualRes.isRight());
     }
 
     @Test
@@ -75,11 +81,32 @@ public class ParserTest {
 
         var actualRes = Parser.parseComponent(node, Specific.class);
 
-        Assertions.assertTrue(actualRes.isLeft());
+        assertTrue(actualRes.isLeft());
         Assertions.assertEquals(1, actualRes.getLeft().problems().size());
         actualRes.getLeft().problems().forEach(p -> {
-            Assertions.assertTrue(p.description().startsWith(expectedDesc));
-            Assertions.assertTrue(p.cause().isPresent());
+            assertTrue(p.description().startsWith(expectedDesc));
+            assertTrue(p.cause().isPresent());
         });
+    }
+
+    @Test
+    public void testParseObject() {
+        ObjectMapper om = new ObjectMapper();
+
+        var t = new StorageDeployInfo((String) null);
+
+        var r = Parser.parseObject(om.valueToTree(t), StorageDeployInfo.class);
+        assertTrue(r.isRight());
+        assertEquals(t, r.get());
+    }
+
+    @Test
+    public void testParseObjectError() throws JsonProcessingException {
+        ObjectMapper om = new ObjectMapper();
+
+        var string = "{\"aWrongField\": \"aWrongValue\"}";
+
+        var r = Parser.parseObject(om.readTree(string), StorageDeployInfo.class);
+        assertTrue(r.isLeft());
     }
 }

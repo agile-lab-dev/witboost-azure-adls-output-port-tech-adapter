@@ -1,8 +1,8 @@
 package it.agilelab.witboost.provisioning.adlsop.api;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import it.agilelab.witboost.provisioning.adlsop.model.AdlsGen2DirectoryInfo;
 import it.agilelab.witboost.provisioning.adlsop.model.PublicInfoObject;
+import it.agilelab.witboost.provisioning.adlsop.model.azure.AdlsGen2DirectoryInfo;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.Info;
 import java.util.Map;
 

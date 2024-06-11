@@ -14,6 +14,7 @@ import it.agilelab.witboost.provisioning.adlsop.openapi.model.ValidationError;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ValidationResult;
 import it.agilelab.witboost.provisioning.adlsop.service.provision.OutputPortHandler;
 import it.agilelab.witboost.provisioning.adlsop.service.validation.ValidationService;
+import jakarta.validation.ConstraintViolationException;
 import java.util.Collections;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -34,14 +35,22 @@ public class ApiServiceImpl {
     }
 
     public ValidationResult validate(ProvisioningRequest provisioningRequest) {
-        Either<FailedOperation, ProvisionRequest<? extends Specific>> validate =
-                validationService.validate(provisioningRequest, false);
-        return validate.fold(
-                failedOperation -> new ValidationResult(false)
-                        .error(new ValidationError(failedOperation.problems().stream()
-                                .map(Problem::description)
-                                .collect(Collectors.toList()))),
-                provisionRequest -> new ValidationResult(true));
+        try {
+            Either<FailedOperation, ProvisionRequest<? extends Specific>> validate =
+                    validationService.validate(provisioningRequest, false);
+            return validate.fold(
+                    failedOperation -> new ValidationResult(false)
+                            .error(new ValidationError(failedOperation.problems().stream()
+                                    .map(Problem::description)
+                                    .collect(Collectors.toList()))),
+                    provisionRequest -> new ValidationResult(true));
+        } catch (ConstraintViolationException validationException) {
+            return new ValidationResult(false)
+                    .error(new ValidationError(validationException.getConstraintViolations().stream()
+                            .map(Problem::fromConstraintViolation)
+                            .map(Problem::description)
+                            .collect(Collectors.toList())));
+        }
     }
 
     public ProvisioningStatus provision(ProvisioningRequest provisioningRequest) {
