@@ -1,0 +1,4 @@
+azure.permissions:
+  clientId: testClientId
+  tenantId: testTenantId
+  clientSecret: testClientSecret

@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+@SpringBootTest(classes = AzureGraphClientTest.class)
 class AzureGraphClientTest {
 
     private GraphServiceClient graphServiceClient;

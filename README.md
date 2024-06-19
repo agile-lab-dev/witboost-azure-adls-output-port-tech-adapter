@@ -163,6 +163,10 @@ By default, the server binds to port `8888` on localhost. After it's up and runn
 
 SwaggerUI is configured and hosted on the path `/docs`. You can access it [here](http://127.0.0.1:8888/docs)
 
+### Configuring
+
+Configuration is handled via Spring Boot `application.yaml` file. Check [Configuration](./docs/configuration.md) for more information.
+
 ## Deploying
 
 This microservice is meant to be deployed to a Kubernetes cluster with the included Helm chart and the scripts that can be found in the `helm` subdirectory. You can find more details [here](helm/README.md).

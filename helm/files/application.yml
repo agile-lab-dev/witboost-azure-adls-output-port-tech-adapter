@@ -8,3 +8,9 @@ server:
 springdoc:
   swagger-ui:
     path: /docs
+
+logging:
+  level:
+    org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor: TRACE
+    sun.net.www.protocol.http.HttpURLConnection: DEBUG
+    org.apache.hc.client5.http: DEBUG

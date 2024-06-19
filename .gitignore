@@ -44,5 +44,7 @@ build/
 *.log
 
 ### HELM ###
-
 helm/charts
+
+### SECRETS ###
+.env
