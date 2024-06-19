@@ -64,6 +64,29 @@ spec:
               value: {{ .Values.otel.serviceName }}
             - name: OTEL_TRACES_EXPORTER
               value: {{ .Values.otel.tracesExporter }}
+            # Authentication env vars. AZURE_TENANT_ID is required always, other env vars depend on auth type
+            - name: AZURE_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: azure-adls-addons-secrets
+                  key: AZURE_TENANT_ID
+            {{- if .Values.authentication.useWorkloadIdentity }}
+             - name: AZURE_FEDERATED_TOKEN_FILE
+              value: /var/run/secrets/tokens/azure-identity-token
+            - name: AZURE_AUTHORITY_HOST
+              value: https://login.microsoftonline.com/
+            {{- else }}
+            - name: AZURE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: azure-adls-addons-secrets
+                  key: AZURE_CLIENT_ID
+            - name: AZURE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: azure-adls-addons-secrets
+                  key: AZURE_CLIENT_SECRET
+            {{- end }}
             {{- if .Values.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}

@@ -38,8 +38,9 @@ dataProduct:
       specific: {}
       info:
         privateInfo:
-          storage_account_name:
-            value: storageAccount
+          outputs:
+            storage_account_name:
+              value: storageAccount
     - kind: outputport
       id: urn:dmb:cmp:healthcare:vaccinations:0:hdfs-output-port
       name: CDP Private HDFS Output Port

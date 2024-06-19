@@ -9,8 +9,8 @@ class StorageDeployInfoTest {
     @Test
     void getStorageAccountNameReturnsOk() {
         var storageAccountName = "storageAccount";
-        StorageDeployInfo info =
-                new StorageDeployInfo(new StoragePrivateInfo(new StringInfoObject(storageAccountName)));
+        StorageDeployInfo info = new StorageDeployInfo(
+                new StoragePrivateOutputInfo(new StoragePrivateInfo(new StringInfoObject(storageAccountName))));
 
         var actualRes = info.getStorageAccountName();
         assertTrue(actualRes.isRight());
@@ -20,8 +20,8 @@ class StorageDeployInfoTest {
     @Test
     void getStorageAccountNameReturnsError() {
         String storageAccountName = null;
-        StorageDeployInfo info =
-                new StorageDeployInfo(new StoragePrivateInfo(new StringInfoObject(storageAccountName)));
+        StorageDeployInfo info = new StorageDeployInfo(
+                new StoragePrivateOutputInfo(new StoragePrivateInfo(new StringInfoObject(storageAccountName))));
 
         var actualRes = info.getStorageAccountName();
         var expectedError = "Failed retrieving Storage Account name from component";
@@ -34,15 +34,19 @@ class StorageDeployInfoTest {
 
     @Test
     void testEquals() {
-        StorageDeployInfo info = new StorageDeployInfo(new StoragePrivateInfo(new StringInfoObject("storageAccount")));
-        StorageDeployInfo info2 = new StorageDeployInfo(new StoragePrivateInfo(new StringInfoObject("storageAccount")));
+        StorageDeployInfo info = new StorageDeployInfo(
+                new StoragePrivateOutputInfo(new StoragePrivateInfo(new StringInfoObject("storageAccount"))));
+        StorageDeployInfo info2 = new StorageDeployInfo(
+                new StoragePrivateOutputInfo(new StoragePrivateInfo(new StringInfoObject("storageAccount"))));
         assertEquals(info, info2);
     }
 
     @Test
     void testHashCode() {
-        StorageDeployInfo info = new StorageDeployInfo(new StoragePrivateInfo(new StringInfoObject("storageAccount")));
-        StorageDeployInfo info2 = new StorageDeployInfo(new StoragePrivateInfo(new StringInfoObject("storageAccount")));
+        StorageDeployInfo info = new StorageDeployInfo(
+                new StoragePrivateOutputInfo(new StoragePrivateInfo(new StringInfoObject("storageAccount"))));
+        StorageDeployInfo info2 = new StorageDeployInfo(
+                new StoragePrivateOutputInfo(new StoragePrivateInfo(new StringInfoObject("storageAccount"))));
         assertEquals(info.hashCode(), info2.hashCode());
     }
 }

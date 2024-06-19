@@ -32,6 +32,11 @@ otel:
 #     value: "10"
 extraEnvVars: []
 
+# -- defines the authentication mode for accessing ADLS resources
+authentication:
+  # -- Defines whether to use workload identity authentication
+  useWorkloadIdentity: false
+
 # -- readiness probe spec
 readinessProbe: {}
 

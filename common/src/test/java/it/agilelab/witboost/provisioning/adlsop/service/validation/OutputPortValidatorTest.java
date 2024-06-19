@@ -61,7 +61,6 @@ public class OutputPortValidatorTest {
         outputPort.setSpecific(specific);
 
         StorageDeployInfo storageDeployInfo = new StorageDeployInfo("storage-account");
-        System.out.println(storageDeployInfo);
         storageArea = new StorageArea<>();
         storageArea.setId("urn:dmb:cmp:healthcare:vaccinations:0:storage");
         storageArea.setName("storage name");
@@ -97,7 +96,6 @@ public class OutputPortValidatorTest {
     @Test
     public void testValidateNoStorageAccountOk() {
         var actualRes = outputPortValidator.validate(dataProduct, outputPort, false);
-        System.out.println(actualRes);
         assertTrue(actualRes.isRight());
     }
 

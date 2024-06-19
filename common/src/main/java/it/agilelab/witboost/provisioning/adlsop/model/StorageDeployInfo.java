@@ -23,20 +23,23 @@ import lombok.*;
 public class StorageDeployInfo {
 
     @NotNull
-    private StoragePrivateInfo privateInfo;
+    @JsonProperty("privateInfo")
+    private StoragePrivateOutputInfo privateInfo;
 
     public StorageDeployInfo(String storageAccountName) {
-        privateInfo = new StoragePrivateInfo(new StringInfoObject(storageAccountName));
+        privateInfo = new StoragePrivateOutputInfo(new StoragePrivateInfo(new StringInfoObject(storageAccountName)));
     }
 
     @JsonCreator
-    public StorageDeployInfo(@JsonProperty(value = "privateInfo", required = true) StoragePrivateInfo privateInfo) {
+    public StorageDeployInfo(
+            @JsonProperty(value = "privateInfo", required = true) StoragePrivateOutputInfo privateInfo) {
         this.privateInfo = privateInfo;
     }
 
     @JsonIgnore
     public Either<FailedOperation, String> getStorageAccountName() {
-        String storageAccountName = privateInfo.getStorageAccountNameInfo().getValue();
+        String storageAccountName =
+                privateInfo.getOutputs().getStorageAccountNameInfo().getValue();
         if (storageAccountName != null) {
             return right(storageAccountName);
         }

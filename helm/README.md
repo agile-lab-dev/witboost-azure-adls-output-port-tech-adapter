@@ -20,6 +20,8 @@ A Helm chart for Kubernetes
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| authentication | object | `{"useWorkloadIdentity":false}` | defines the authentication mode for accessing ADLS resources |
+| authentication.useWorkloadIdentity | bool | `false` | Defines whether to use workload identity authentication |
 | configOverride | string | `nil` | This configuration allows you to override the application.yml file |
 | dockerRegistrySecretName | string | `"regcred"` | Docker Registry Secret name used to access a private repo |
 | extraEnvVars | list | `[]` | define extra variables to add to the container(s) e.g: extraEnvVars:   - name: FOO     value: "10" |
