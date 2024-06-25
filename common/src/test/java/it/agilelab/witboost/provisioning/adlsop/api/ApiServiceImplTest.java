@@ -219,7 +219,7 @@ public class ApiServiceImplTest {
     public void testUpdateAclValidationError() {
         UpdateAclRequest updateAclRequest = new UpdateAclRequest(List.of(), new ProvisionInfo("request", ""));
         var failedOperation = new FailedOperation(Collections.singletonList(new Problem("error")));
-        when(validationService.validate(any(ProvisioningRequest.class), eq(true)))
+        when(validationService.validate(any(ProvisioningRequest.class), eq(false)))
                 .thenReturn(left(failedOperation));
 
         var ex = assertThrows(
@@ -232,7 +232,7 @@ public class ApiServiceImplTest {
         UpdateAclRequest updateAclRequest = new UpdateAclRequest(List.of(), new ProvisionInfo("request", ""));
         OutputPort<Specific> outputPort = new OutputPort<>();
         outputPort.setKind("unsupported");
-        when(validationService.validate(any(ProvisioningRequest.class), eq(true)))
+        when(validationService.validate(any(ProvisioningRequest.class), eq(false)))
                 .thenReturn(right(new ProvisionRequest<>(null, outputPort, false)));
         String expectedDesc = "The kind 'unsupported' of the component is not supported by this Specific Provisioner";
         var failedOperation = new FailedOperation(Collections.singletonList(new Problem(expectedDesc)));
@@ -245,14 +245,20 @@ public class ApiServiceImplTest {
     @Test
     public void testUpdateAclOutputPortOk() {
         var users = List.of("user:john.doe_agilelab.it", "user:alice_agilelab.it");
-        UpdateAclRequest updateAclRequest = new UpdateAclRequest(users, new ProvisionInfo("request", ""));
+        UpdateAclRequest updateAclRequest = new UpdateAclRequest(
+                users,
+                new ProvisionInfo(
+                        "request",
+                        "{\"info\":{\"privateInfo\":{\"outputs\":{\"storage_account_name\":{\"value\":\"storageAccountName\"}}},\"publicInfo\":{}}}"));
+        var storageInfo = new ProvisioningResult("storageAccountName");
+
         OutputPort<Specific> outputPort = new OutputPort<>();
         outputPort.setKind("outputport");
         var expectedRes = new ProvisioningStatus(ProvisioningStatus.StatusEnum.COMPLETED, "");
         var provisionRequest = new ProvisionRequest<>(null, outputPort, false);
-        when(validationService.validate(any(ProvisioningRequest.class), eq(true)))
+        when(validationService.validate(any(ProvisioningRequest.class), eq(false)))
                 .thenReturn(right(provisionRequest));
-        when(outputPortHandler.updateAcl(users, provisionRequest)).thenReturn(right(expectedRes));
+        when(outputPortHandler.updateAcl(users, provisionRequest, storageInfo)).thenReturn(right(expectedRes));
 
         var actualRes = provisionService.updateAcl(updateAclRequest);
 
@@ -260,17 +266,38 @@ public class ApiServiceImplTest {
     }
 
     @Test
-    public void testUpdateAclOutputPortFailHandler() {
+    public void testUpdateAclOutputPortInfoParsingError() {
         var users = List.of("user:john.doe_agilelab.it", "user:alice_agilelab.it");
-        UpdateAclRequest updateAclRequest = new UpdateAclRequest(users, new ProvisionInfo("request", ""));
+        UpdateAclRequest updateAclRequest =
+                new UpdateAclRequest(users, new ProvisionInfo("request", "{wrongJSONInfo}"));
+
         OutputPort<Specific> outputPort = new OutputPort<>();
         outputPort.setKind("outputport");
         var provisionRequest = new ProvisionRequest<>(null, outputPort, false);
-        when(validationService.validate(any(ProvisioningRequest.class), eq(true)))
+        when(validationService.validate(any(ProvisioningRequest.class), eq(false)))
+                .thenReturn(right(provisionRequest));
+
+        assertThrows(SpecificProvisionerValidationException.class, () -> provisionService.updateAcl(updateAclRequest));
+    }
+
+    @Test
+    public void testUpdateAclOutputPortFailHandler() {
+        var users = List.of("user:john.doe_agilelab.it", "user:alice_agilelab.it");
+        UpdateAclRequest updateAclRequest = new UpdateAclRequest(
+                users,
+                new ProvisionInfo(
+                        "request",
+                        "{\"info\":{\"privateInfo\":{\"outputs\":{\"storage_account_name\":{\"value\":\"storageAccountName\"}}},\"publicInfo\":{}}}"));
+        var storageInfo = new ProvisioningResult("storageAccountName");
+
+        OutputPort<Specific> outputPort = new OutputPort<>();
+        outputPort.setKind("outputport");
+        var provisionRequest = new ProvisionRequest<>(null, outputPort, false);
+        when(validationService.validate(any(ProvisioningRequest.class), eq(false)))
                 .thenReturn(right(provisionRequest));
         String expectedDesc = "Error on ADLS";
         var failedOperation = new FailedOperation(Collections.singletonList(new Problem(expectedDesc)));
-        when(outputPortHandler.updateAcl(users, provisionRequest)).thenReturn(left(failedOperation));
+        when(outputPortHandler.updateAcl(users, provisionRequest, storageInfo)).thenReturn(left(failedOperation));
 
         var ex = assertThrows(
                 SpecificProvisionerValidationException.class, () -> provisionService.updateAcl(updateAclRequest));

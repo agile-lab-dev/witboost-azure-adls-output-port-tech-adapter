@@ -1,7 +1,7 @@
 package it.agilelab.witboost.provisioning.adlsop.api;
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import it.agilelab.witboost.provisioning.adlsop.model.PublicInfoObject;
+import it.agilelab.witboost.provisioning.adlsop.model.StoragePrivateOutputInfo;
 import it.agilelab.witboost.provisioning.adlsop.model.azure.AdlsGen2DirectoryInfo;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.Info;
 import java.util.Map;
@@ -20,6 +20,6 @@ public class InfoMapper {
                         "path", PublicInfoObject.createTextInfo("Folder path", directoryInfo.getPath()),
                         "adlsUri", PublicInfoObject.createTextInfo("ADLS URI", directoryInfo.getAdlsURI()),
                         "format", PublicInfoObject.createTextInfo("File format", directoryInfo.getFileFormat())),
-                JsonNodeFactory.instance.objectNode());
+                new StoragePrivateOutputInfo(directoryInfo.getStorageAccount()));
     }
 }

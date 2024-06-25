@@ -109,4 +109,33 @@ public class ParserTest {
         var r = Parser.parseObject(om.readTree(string), StorageDeployInfo.class);
         assertTrue(r.isLeft());
     }
+
+    @Test
+    public void testParseStringObject() throws JsonProcessingException {
+        ObjectMapper om = new ObjectMapper();
+
+        var t = new StorageDeployInfo((String) null);
+
+        var r = Parser.parseObject(om.writeValueAsString(t), StorageDeployInfo.class);
+        assertTrue(r.isRight());
+        assertEquals(t, r.get());
+    }
+
+    @Test
+    public void testParseStringObjectError() {
+
+        String string = "{\"aWrongField\": \"aWrongValue\"}";
+
+        var r = Parser.parseObject(string, StorageDeployInfo.class);
+        assertTrue(r.isLeft());
+    }
+
+    @Test
+    public void testParseStringObjectMalformedJson() {
+
+        String string = "aWrongField: aWrongValue";
+
+        var r = Parser.parseObject(string, StorageDeployInfo.class);
+        assertTrue(r.isLeft());
+    }
 }

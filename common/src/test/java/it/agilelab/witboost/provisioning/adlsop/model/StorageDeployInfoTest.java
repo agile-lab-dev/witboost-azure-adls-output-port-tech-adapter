@@ -24,7 +24,7 @@ class StorageDeployInfoTest {
                 new StoragePrivateOutputInfo(new StoragePrivateInfo(new StringInfoObject(storageAccountName))));
 
         var actualRes = info.getStorageAccountName();
-        var expectedError = "Failed retrieving Storage Account name from component";
+        var expectedError = "Failed retrieving Storage Account name from deploy private info";
         assertTrue(actualRes.isLeft());
         actualRes.getLeft().problems().forEach(p -> {
             assertEquals(expectedError, p.description());

@@ -5,6 +5,7 @@ import it.agilelab.witboost.provisioning.adlsop.common.FailedOperation;
 import it.agilelab.witboost.provisioning.adlsop.common.Problem;
 import it.agilelab.witboost.provisioning.adlsop.common.SpecificProvisionerValidationException;
 import it.agilelab.witboost.provisioning.adlsop.model.ProvisionRequest;
+import it.agilelab.witboost.provisioning.adlsop.model.ProvisioningResult;
 import it.agilelab.witboost.provisioning.adlsop.model.Specific;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.DescriptorKind;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ProvisioningRequest;
@@ -12,6 +13,7 @@ import it.agilelab.witboost.provisioning.adlsop.openapi.model.ProvisioningStatus
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.UpdateAclRequest;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ValidationError;
 import it.agilelab.witboost.provisioning.adlsop.openapi.model.ValidationResult;
+import it.agilelab.witboost.provisioning.adlsop.parser.Parser;
 import it.agilelab.witboost.provisioning.adlsop.service.provision.OutputPortHandler;
 import it.agilelab.witboost.provisioning.adlsop.service.validation.ValidationService;
 import jakarta.validation.ConstraintViolationException;
@@ -98,18 +100,22 @@ public class ApiServiceImpl {
                 Boolean.FALSE);
 
         Either<FailedOperation, ProvisionRequest<? extends Specific>> eitherValidation =
-                validationService.validate(provisioningRequest, true);
+                validationService.validate(provisioningRequest, false);
         if (eitherValidation.isLeft()) throw new SpecificProvisionerValidationException(eitherValidation.getLeft());
 
         ProvisionRequest<? extends Specific> provisionRequest = eitherValidation.get();
 
         switch (provisionRequest.component().getKind()) {
             case OUTPUTPORT_KIND -> {
-                return outputPortHandler
-                        .updateAcl(updateAclRequest.getRefs(), provisionRequest)
-                        .getOrElseThrow(failedOperation -> {
-                            throw new SpecificProvisionerValidationException(failedOperation);
-                        });
+                var eitherStorageInfo =
+                        Parser.parseObject(updateAclRequest.getProvisionInfo().getResult(), ProvisioningResult.class);
+                if (eitherStorageInfo.isRight()) {
+                    return outputPortHandler
+                            .updateAcl(updateAclRequest.getRefs(), provisionRequest, eitherStorageInfo.get())
+                            .getOrElseThrow(failedOperation -> {
+                                throw new SpecificProvisionerValidationException(failedOperation);
+                            });
+                } else throw new SpecificProvisionerValidationException(eitherStorageInfo.getLeft());
             }
             default -> {
                 log.error(String.format(

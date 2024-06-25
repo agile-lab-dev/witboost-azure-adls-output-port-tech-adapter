@@ -66,6 +66,17 @@ public class Parser {
                 });
     }
 
+    public static <T> Either<FailedOperation, T> parseObject(String object, Class<T> clazz) {
+        return Try.of(() -> mapper.readTree(object))
+                .toEither()
+                .mapLeft(throwable -> {
+                    String errorMessage = "Failed to deserialize object. Details: " + throwable.getMessage();
+                    logger.error(errorMessage, throwable);
+                    return new FailedOperation(Collections.singletonList(new Problem(errorMessage, throwable)));
+                })
+                .flatMap(node -> parseObject(node, clazz));
+    }
+
     public static <T> Either<FailedOperation, T> parseObject(JsonNode node, Class<T> clazz) {
         return Try.of(() -> {
                     JavaType javaType = mapper.getTypeFactory().constructType(clazz);

@@ -261,13 +261,16 @@ class OutputPortHandlerTest {
     void testUpdateAclOk() {
         var users = List.of("user:john.doe_agilelab.it", "user:alice_agilelab.it");
         var mappedUsers = List.of("1234-5678-90ab-cdef", "1234-5678-90ab-cdef");
+        var storageInfo = new ProvisioningResult("storageAccount");
+
         Map<String, Either<Throwable, String>> mapResult = Map.of(
                 users.get(0), right(mappedUsers.get(0)),
                 users.get(1), right(mappedUsers.get(1)));
         when(azureMapper.map(Set.copyOf(users))).thenReturn(mapResult);
         when(adlsGen2Service.updateAcl("storageAccount", "containerName", "path", mappedUsers))
                 .thenReturn(right(null));
-        var actualRes = outputPortHandler.updateAcl(users, new ProvisionRequest<>(dataProduct, outputPort, true));
+        var actualRes =
+                outputPortHandler.updateAcl(users, new ProvisionRequest<>(dataProduct, outputPort, true), storageInfo);
 
         assertTrue(actualRes.isRight());
     }
@@ -280,11 +283,13 @@ class OutputPortHandlerTest {
         Map<String, Either<Throwable, String>> mapResult = Map.of(
                 users.get(0), right(mappedUsers.get(0)),
                 users.get(1), left(error));
+        var storageInfo = new ProvisioningResult("storageAccount");
 
         when(azureMapper.map(Set.copyOf(users))).thenReturn(mapResult);
         when(adlsGen2Service.updateAcl("storageAccount", "containerName", "path", mappedUsers))
                 .thenReturn(right(null));
-        var actualRes = outputPortHandler.updateAcl(users, new ProvisionRequest<>(dataProduct, outputPort, true));
+        var actualRes =
+                outputPortHandler.updateAcl(users, new ProvisionRequest<>(dataProduct, outputPort, true), storageInfo);
 
         assertTrue(actualRes.isLeft());
         actualRes.getLeft().problems().forEach(p -> {
@@ -300,11 +305,13 @@ class OutputPortHandlerTest {
         Map<String, Either<Throwable, String>> mapResult = Map.of(
                 users.get(0), right(mappedUsers.get(0)),
                 users.get(1), right(mappedUsers.get(1)));
+        var storageInfo = new ProvisioningResult("storageAccount");
 
         when(azureMapper.map(Set.copyOf(users))).thenReturn(mapResult);
         when(adlsGen2Service.updateAcl("storageAccount", "containerName", "path", mappedUsers))
                 .thenReturn(left(new FailedOperation(Collections.singletonList(new Problem("Error!")))));
-        var actualRes = outputPortHandler.updateAcl(users, new ProvisionRequest<>(dataProduct, outputPort, true));
+        var actualRes =
+                outputPortHandler.updateAcl(users, new ProvisionRequest<>(dataProduct, outputPort, true), storageInfo);
 
         var expectedError = "Error!";
         assertTrue(actualRes.isLeft());
@@ -322,9 +329,10 @@ class OutputPortHandlerTest {
         storageArea.setSpecific(new Specific());
 
         var users = List.of("user:john.doe_agilelab.it", "user:alice_agilelab.it");
+        var storageInfo = new ProvisioningResult("storageAccount");
 
-        var actualRes =
-                outputPortHandler.updateAcl(users, new ProvisionRequest<>(new DataProduct(), storageArea, true));
+        var actualRes = outputPortHandler.updateAcl(
+                users, new ProvisionRequest<>(new DataProduct(), storageArea, true), storageInfo);
 
         var expectedError = "The component type is not of expected type OutputPort";
         assertTrue(actualRes.isLeft());
@@ -343,8 +351,10 @@ class OutputPortHandlerTest {
         outputPort.setSpecific(new Specific());
 
         var users = List.of("user:john.doe_agilelab.it", "user:alice_agilelab.it");
+        var storageInfo = new ProvisioningResult("storageAccount");
 
-        var actualRes = outputPortHandler.updateAcl(users, new ProvisionRequest<>(new DataProduct(), outputPort, true));
+        var actualRes = outputPortHandler.updateAcl(
+                users, new ProvisionRequest<>(new DataProduct(), outputPort, true), storageInfo);
 
         var expectedError = "The specific section of the component outputport-id is not of type OutputPortSpecific";
         assertTrue(actualRes.isLeft());
@@ -355,37 +365,22 @@ class OutputPortHandlerTest {
     }
 
     @Test
-    void testUpdateAclMissingDependsOn() {
-        var users = List.of("user:john.doe_agilelab.it", "user:alice_agilelab.it");
-        var actualRes = outputPortHandler.updateAcl(
-                users, new ProvisionRequest<>(new DataProduct(), outputPortNoDepends, true));
-
-        var expectedError = "The output port has not a corresponding dependent storage area";
-        assertTrue(actualRes.isLeft());
-        actualRes.getLeft().problems().forEach(p -> {
-            assertEquals(expectedError, p.description());
-            assertTrue(p.cause().isEmpty());
-        });
-    }
-
-    @Test
     void testUpdateAclWronglyMissingStorageDeployInfo() {
         var outputPortNode = om.valueToTree(outputPort);
-        var storageAreaNode = om.valueToTree(storageAreaNoInfo);
         List<JsonNode> nodes = new ArrayList<>();
-        nodes.add(storageAreaNode);
         nodes.add(outputPortNode);
         DataProduct dp = new DataProduct();
         dp.setComponents(nodes);
 
         var users = List.of("user:john.doe_agilelab.it", "user:alice_agilelab.it");
-        var actualRes = outputPortHandler.updateAcl(users, new ProvisionRequest<>(dp, outputPort, true));
+        var storageInfo = new ProvisioningResult((String) null);
+        var actualRes = outputPortHandler.updateAcl(users, new ProvisionRequest<>(dp, outputPort, true), storageInfo);
 
-        var error = new FailedOperation(Collections.singletonList(new Problem(
-                "Failed retrieving deploy info from component urn:dmb:cmp:healthcare:vaccinations:0:storage")));
+        var error = new FailedOperation(Collections.singletonList(
+                new Problem("Failed retrieving Storage Account name from deploy private info")));
 
         assertTrue(actualRes.isLeft());
         assertEquals(1, actualRes.getLeft().problems().size());
-        assertEquals(actualRes.getLeft(), error);
+        assertEquals(error, actualRes.getLeft());
     }
 }

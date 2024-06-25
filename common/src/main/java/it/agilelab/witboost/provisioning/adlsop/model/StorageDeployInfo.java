@@ -43,7 +43,7 @@ public class StorageDeployInfo {
         if (storageAccountName != null) {
             return right(storageAccountName);
         }
-        return left(new FailedOperation(
-                Collections.singletonList(new Problem("Failed retrieving Storage Account name from component"))));
+        return left(new FailedOperation(Collections.singletonList(
+                new Problem("Failed retrieving Storage Account name from deploy private info"))));
     }
 }

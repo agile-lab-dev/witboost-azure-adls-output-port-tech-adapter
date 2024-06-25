@@ -9,23 +9,23 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
-@Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Getter
 @EqualsAndHashCode
 @ToString
 @Valid
-public class StoragePrivateOutputInfo {
+public class ProvisioningResult {
 
     @NotNull
-    @JsonProperty("outputs")
-    private StoragePrivateInfo outputs;
+    @JsonProperty("info")
+    StorageDeployInfo info;
 
-    public StoragePrivateOutputInfo(String storageAccount) {
-        this.outputs = new StoragePrivateInfo(new StringInfoObject(storageAccount));
+    public ProvisioningResult(String storageAccountName) {
+        info = new StorageDeployInfo(storageAccountName);
     }
 
     @JsonCreator
-    public StoragePrivateOutputInfo(@JsonProperty(value = "outputs", required = true) StoragePrivateInfo outputs) {
-        this.outputs = outputs;
+    public ProvisioningResult(@JsonProperty(value = "info", required = true) StorageDeployInfo info) {
+        this.info = info;
     }
 }
