@@ -5,6 +5,14 @@
 # -- Docker Registry Secret name used to access a private repo
 dockerRegistrySecretName: regcred
 
+externalSecrets:
+    # -- Secret store installed in the cluster
+    secretStore: CHANGEME # Example: fake
+    # -- Secrets refresh interval
+    refreshInterval: 15m
+    # -- Extraction key
+    extractKey: adls-op
+
 image:
   # -- Image repository
   registry: registry.gitlab.com/agilefactory/witboost.mesh/provisioning/witboost.mesh.provisioning.outputport.adlsgen2
