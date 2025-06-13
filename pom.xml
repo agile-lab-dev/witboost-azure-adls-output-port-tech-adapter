@@ -113,6 +113,7 @@
                 <artifactId>dependency-check-maven</artifactId>
                 <version>9.0.9</version>
                 <configuration>
+                    <nvdApiKey>${NVDAPIKEY}</nvdApiKey>
                     <failBuildOnCVSS>9</failBuildOnCVSS>
                     <suppressionFiles>
                         <suppressionFile>suppressions/suppression.xml</suppressionFile>
